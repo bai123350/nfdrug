@@ -8,10 +8,11 @@
 */
 
 // include { MOLFLOW  } from './workflows/molflow'
-include { RUN_DATA } from '../workflows/flow'
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_molflow_pipeline'
-include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_molflow_pipeline'
-include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_molflow_pipeline'
+include { RUN_DATA } from './workflows/flow'
+
+// include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_molflow_pipeline'
+// include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_molflow_pipeline'
+// include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 
 /*
 
@@ -31,22 +32,22 @@ params.fasta = getGenomeAttribute('fasta')
 //
 // WORKFLOW: Run main analysis pipeline depending on type of input
 //
-workflow OPENBIO_MOLFLOW {
+// workflow OPENBIO_MOLFLOW {
 
-    take:
-    samplesheet // channel: samplesheet read in from --input
+//     take:
+//     samplesheet // channel: samplesheet read in from --input
 
-    main:
+//     main:
 
-    //
-    // WORKFLOW: Run pipeline
-    //
-    MOLFLOW (
-        samplesheet
-    )
-    emit:
-    multiqc_report = MOLFLOW.out.multiqc_report // channel: /path/to/multiqc_report.html
-}
+//     //
+//     // WORKFLOW: Run pipeline
+//     //
+//     MOLFLOW (
+//         samplesheet
+//     )
+//     emit:
+//     multiqc_report = MOLFLOW.out.multiqc_report // channel: /path/to/multiqc_report.html
+// }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
