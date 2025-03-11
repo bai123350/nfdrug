@@ -11,7 +11,7 @@ workflow RUNDATA {
     take:
     samplesheet // channel: samplesheet read in from --input
 
-    script:
+    main:
     // WORKFLOW: Run pipeline
     // MOLFLOW (
     //     samplesheet
@@ -20,10 +20,10 @@ workflow RUNDATA {
 
     // MODULE: Run FastQC
     FASTQC (
-        ch_samplesheet
+        samplesheet
     )
     // )
 
     emit:
-    multiqc_report = FASTQC.out.multiqc_report // channel: /path/to/multiqc_report.html
+    multiqc_report = FASTQC.out.zip // channel: /path/to/multiqc_report.html
 }

@@ -7,8 +7,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// include { MOLFLOW  } from './workflows/molflow'
-include { RUN_DATA } from './workflows/flow'
+//include { MOLFLOW  } from './workflows/molflow'
+include { RUNDATA    } from './workflows/flow'
 
 // include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 // include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_molflow_pipeline'
