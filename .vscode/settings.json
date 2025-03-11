@@ -1,0 +1,26 @@
+{
+    "r.rterm.linux": "/home/bio-17/projects/anaconda3/bin/radian",
+    "r.bracketedPaste": true,
+    "r.rpath.linux": "/home/bio-17/projects/anaconda3/envs/py310/bin/R",
+
+    "[r]": {
+    "editor.tabSize": 2
+},
+"r.lsp.diagnostics": false,
+"editor.rulers": [
+    200
+],
+// "nextflow.formatting.harshilAlignment": true,mirrors.cloud.tencent.com/gradle/gradle-8.5-bin.zip
+"nextflow.java.home": "/home/bio-17/projects/anaconda3/envs/sam",
+// "java.import.gradle.offline.enabled": true,
+// "nextflow.languageServer.path": "/home/bio-17/projects/drug/nf_drug/nfdrug/tmp/vscode-language-nextflow/language-server/build/libs/language-server-all.jar",
+// "nextflow.includePaths": [
+//   "modules/**",    // 声明模块路径
+//   "lib/**",        // 函数库路径
+//   "workflows/**"   // 子工作流路径
+// ],
+// "nextflow.symbols.autoGenerate": true,  // 自动生成符号表
+// "editor.quickSuggestions": {
+//   "strings": true  // 允许在字符串中触发建议
+// }
+}
