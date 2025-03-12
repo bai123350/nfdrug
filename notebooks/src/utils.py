@@ -235,7 +235,7 @@ def read_patient_info(gene_list):
 
     gene_index = gene_list
 
-    csv_reader = csv.reader(open("../data/FUSCCTNBC_info.csv"))
+    csv_reader = csv.reader(open("/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/FUSCCTNBC_info.csv"))
     first_line = True
     y_tumor = {} # 1-tumor 0-normal
     y_subtypes = {} # 1-LAR 2-MES 3-BLIS 4-IM  0-Normal

@@ -9,8 +9,7 @@
 
 //include { MOLFLOW  } from './workflows/molflow'
 include { RUNDATA    } from './workflows/flow'
-
-// include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_molflow_pipeline'
+include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 // include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 // include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 
@@ -60,20 +59,26 @@ workflow {
     //
     // SUBWORKFLOW: Run initialisation tasks
     //
-    // PIPELINE_INITIALISATION (
-    //     params.version,
-    //     params.validate_params,
-    //     params.monochrome_logs,
-    //     args,
-    //     params.outdir,
-    //     params.input
-    // )
-    Channel
-        .fromPath('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/9_drug_targets_1.0_revised.tsv')
-        .splitCsv(header: true, sep: '\t')
-        .set { drug_targets }
+    PIPELINE_INITIALISATION (
+        params.version,
+        params.validate_params,
+        params.nfdrug_logs,
+        args,
+        params.outdir,
+        params.input
+    )
+    // Channel
+    //     .fromPath('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/9_drug_targets_1.0_revised.tsv')
+    //     .splitCsv(header: true, sep: '\t')
+    //     .set { drug_targets }
 
-    drug_targets.view()
+    // drug_targets.view()
+
+    RUNDATA (
+        PIPELINE_INITIALISATION.out.samplesheet
+    )
+
+
 
 
     //

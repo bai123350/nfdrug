@@ -26,7 +26,7 @@ args = parse()
 set_seed(args.seed)
 
 if os.path.exists('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/ppi_global_graph_'+str(args.score)+'.pkl'):
-    with open('../data/ppi_global_graph_'+str(args.score)+'.pkl','rb') as f:
+    with open('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/ppi_global_graph_'+str(args.score)+'.pkl','rb') as f:
         global_graph = pickle.load(f)
 else:
     global_graph = read_global_graph(args.score)
