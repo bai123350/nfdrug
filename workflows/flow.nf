@@ -3,7 +3,7 @@
 
 // include {} from '../modules/nf-core/models/main'
 
-include { FASTQC                 } from '../modules/nf-core/fastqc/main'
+include { DATATETCH               } from '../modules/nf-core/datafetch/main'
 
 
 
@@ -19,11 +19,11 @@ workflow RUNDATA {
     ch_multiqc_files = Channel.empty()
 
     // MODULE: Run FastQC
-    FASTQC (
+    DATATETCH (
         samplesheet
     )
-    // )
+
 
     emit:
-    multiqc_report = FASTQC.out.zip // channel: /path/to/multiqc_report.html
+    multiqc_report = DATATETCH.out.html // channel: /path/to/multiqc_report.html
 }

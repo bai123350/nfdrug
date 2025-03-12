@@ -28,7 +28,7 @@ workflow PIPELINE_INITIALISATION {
     take:
     version           // boolean: Display version and exit
     validate_params   // boolean: Boolean whether to validate parameters against the schema at runtime
-    nfdrug_logs       // boolean: Do not use coloured log outputs
+    monochrome_logs       // boolean: Do not use coloured log outputs
     nextflow_cli_args //   array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
     input             //  string: Path to input samplesheet
@@ -63,8 +63,8 @@ workflow PIPELINE_INITIALISATION {
     //
     // Check config provided to the pipeline
     //
-    println('================')
-    println(nextflow_cli_args)
+    // println('================**********')
+    // println(nextflow_cli_args)
     UTILS_NFCORE_PIPELINE (
         nextflow_cli_args
     )
@@ -81,11 +81,11 @@ workflow PIPELINE_INITIALISATION {
     Channel
         .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
         .map {
-            meta, fastq_1, fastq_2 ->
-                if (!fastq_2) {
-                    return [ meta.id, meta + [ single_end:true ], [ fastq_1 ] ]
+            meta, protein1, protein2 ->
+                if (!protein2) {
+                    return [ meta.id, meta + [ single_end:true ], [ protein1 ] ]
                 } else {
-                    return [ meta.id, meta + [ single_end:false ], [ fastq_1, fastq_2 ] ]
+                    return [ meta.id, meta + [ single_end:false ], [ protein1, protein2 ] ]
                 }
         }
         .groupTuple()
