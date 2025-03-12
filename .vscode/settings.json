@@ -14,6 +14,7 @@
 "nextflow.java.home": "/home/bio-17/projects/anaconda3/envs/sam",
 "nextflow.debug": true,
 "nextflow.formatting.harshilAlignment": true,
+"python.terminal.executeInFileDir": false,
 // "java.import.gradle.offline.enabled": true,
 // "nextflow.languageServer.path": "/home/bio-17/projects/drug/nf_drug/nfdrug/tmp/vscode-language-nextflow/language-server/build/libs/language-server-all.jar",
 // "nextflow.includePaths": [
