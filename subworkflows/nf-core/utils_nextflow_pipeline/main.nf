@@ -20,6 +20,7 @@ workflow UTILS_NEXTFLOW_PIPELINE {
     //
     // Print workflow version and exit on --version
     //
+    // println("check_conda_channels: ${check_conda_channels}")
     if (print_version) {
         log.info("${workflow.manifest.name} ${getWorkflowVersion()}")
         System.exit(0)
@@ -70,6 +71,9 @@ def getWorkflowVersion() {
 //
 // Dump pipeline parameters to a JSON file
 //
+//该函数将Nextflow的参数转换为JSON格式并保存到指定目录。
+//首先生成带时间戳的文件名，然后将参数转换为JSON字符串并写入临时文件，
+//最后将文件复制到目标目录并删除临时文件。
 def dumpParametersToJSON(outdir) {
     def timestamp = new java.util.Date().format('yyyy-MM-dd_HH-mm-ss')
     def filename  = "params_${timestamp}.json"

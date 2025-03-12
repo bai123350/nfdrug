@@ -28,7 +28,7 @@ workflow PIPELINE_INITIALISATION {
     take:
     version           // boolean: Display version and exit
     validate_params   // boolean: Boolean whether to validate parameters against the schema at runtime
-    nfdrug_logs   // boolean: Do not use coloured log outputs
+    nfdrug_logs       // boolean: Do not use coloured log outputs
     nextflow_cli_args //   array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
     input             //  string: Path to input samplesheet
@@ -44,12 +44,16 @@ workflow PIPELINE_INITIALISATION {
         version,
         true,
         outdir,
+        //检查工作流配置文件中的 profile 是否包含特定的关键字 conda 或 mamba。
         workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1
     )
+
+    //println(workflow.profile.tokenize(','))
 
     //
     // Validate parameters and generate parameter summary to stdout
     //
+    // println(workflow)
     UTILS_NFSCHEMA_PLUGIN (
         workflow,
         validate_params,
@@ -59,6 +63,8 @@ workflow PIPELINE_INITIALISATION {
     //
     // Check config provided to the pipeline
     //
+    println('================')
+    println(nextflow_cli_args)
     UTILS_NFCORE_PIPELINE (
         nextflow_cli_args
     )
