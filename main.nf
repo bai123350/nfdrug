@@ -67,12 +67,9 @@ workflow {
         params.outdir,
         params.input
     )
-    // Channel
-    //     .fromPath('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/9_drug_targets_1.0_revised.tsv')
-    //     .splitCsv(header: true, sep: '\t')
-    //     .set { drug_targets }
 
-    // drug_targets.view()
+
+    println(PIPELINE_INITIALISATION.out.samplesheet.view())
 
     RUNDATA (
         PIPELINE_INITIALISATION.out.samplesheet

@@ -1,0 +1,10 @@
+name: textp
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - pip
+  - pip:
+    - numpy
+    - pandas
+    - matplotlib
