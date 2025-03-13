@@ -3,8 +3,5 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - pip
-  - pip:
-    - numpy
-    - pandas
-    - matplotlib
+  - python=3.11
+  - json
