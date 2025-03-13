@@ -15,7 +15,7 @@ process DATATETCH {
     output:
     tuple val(meta), path("*.json"), emit: html
     // tuple val(meta), path("*.zip") , emit: zip
-    path  "versions.yml"           , emit: versions
+    // path  "versions.yml"           , emit: versions
 
     script:
     """

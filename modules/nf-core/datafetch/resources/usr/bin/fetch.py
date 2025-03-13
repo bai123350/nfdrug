@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import json
 
@@ -51,7 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--path2', type=str, default='/home/bio-17/projects/drug/nf_drug/nfdrug/data/9606.protein.links.full.v11.5.txt')
     parser.add_argument('--out', type=str, default='graph_dicts.json')
     args = parser.parse_args()
-    graph_dicts = read_global_graph(args.thres_score,args.path1,args.path2)
+    graph_dicts = read_global_graph(args.score,args.path1,args.path2)
     json.dump(graph_dicts, open(args.out,'w'))
 
 
