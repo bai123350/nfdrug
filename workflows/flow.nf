@@ -30,7 +30,7 @@ workflow RUNDATA {
 
     // json.view()
     DATAPROCESS (
-       samplesheet
+       samplesheet,json
     )
 
 

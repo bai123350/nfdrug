@@ -15,6 +15,7 @@ process DATAPROCESS {
 
     input:
     tuple val(meta), val(reads)
+    path(json)
 
     output:
     val(meta),  emit: meta_id
