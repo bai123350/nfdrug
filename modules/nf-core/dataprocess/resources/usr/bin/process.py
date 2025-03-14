@@ -5,9 +5,8 @@ import numpy as np
 import networkx as nx
 import numpy as np
 from copy import deepcopy
-from sklearn import preprocessing
-import random
-import csv
+# import random
+# import csv
 import json
 
 
@@ -157,20 +156,29 @@ def generate_network_architecture(graph_dicts, drug_gene_dicts, key1, key2, thre
 
 
 
+if __name__ == '__main__':
 
-drug_dicts = {}
-with open('/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/merged_common_names.csv') as f:
-    for index , line in enumerate(f.readlines()):
-        if index == 0: continue
-        line = line.replace('"','').split(',')
-        # drug_dicts[line[0]]=line[1:]
-        drug_dicts[line[0]] = line[1].strip().split()  
-print(drug_dicts)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', type=str, default='/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/merged_common_names.csv')
+    parser.add_argument('--out', type=str, default="drug.json")
+    args = parser.parse_args()
 
-global_graph = json.load(open("/home/bio-17/projects/drug/nf_drug/nfdrug/results/datafetch/res.json", 'r'))
-basic_layer, transfer_layer, second_layer = \
-    generate_network_architecture(global_graph, drug_dicts,\
-    "Quercetin","Troglitazone", 2)
-transfer_layer = np.array(transfer_layer).T
-basic_layer_adj = np.array(basic_layer['edges']).T
-second_layer_adj = np.array(second_layer['edges']).T
+
+    drug_dicts = {}
+    with open(args.path) as f:
+        for index , line in enumerate(f.readlines()):
+            if index == 0: continue
+            line = line.replace('"','').split(',')
+            # drug_dicts[line[0]]=line[1:]
+            drug_dicts[line[0]] = line[1].strip().split() 
+    json.dump(drug_dicts, open(args.out,'w'))
+ 
+# print(drug_dicts)
+
+# global_graph = json.load(open("/home/bio-17/projects/drug/nf_drug/nfdrug/results/datafetch/res.json", 'r'))
+# basic_layer, transfer_layer, second_layer = \
+#     generate_network_architecture(global_graph, drug_dicts,\
+#     "Quercetin","Troglitazone", 2)
+# transfer_layer = np.array(transfer_layer).T
+# basic_layer_adj = np.array(basic_layer['edges']).T
+# second_layer_adj = np.array(second_layer['edges']).T

@@ -23,11 +23,12 @@ process DATAPROCESS {
 
     script:
     """
-    
+    process.py --path ${reads[2]}  --out "drug.json"
     """
 
     stub:
     """
+    touch "drug.json"
     
     """
 }
