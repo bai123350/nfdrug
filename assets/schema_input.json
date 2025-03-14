@@ -18,15 +18,23 @@
                 "format": "file-path",
                 "exists": true,
                 "pattern": "^\\S+$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "errorMessage": "protein1 must be provided and cannot contain spaces"
             },
             "protein2": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
                  "pattern": "^\\S+$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "errorMessage": "protein2 must be provided and cannot contain spaces"
+            },
+            "druggene":{
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                 "pattern": "^\\S+$",
+                "errorMessage": "druggene must be provided and cannot contain spaces"
             }
+
         },
         "required": ["id", "protein1"]
     }
