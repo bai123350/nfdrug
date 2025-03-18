@@ -48,6 +48,11 @@ second_layer_adj = np.array(second_layer['edges']).T
 
 
 X, y = read_patient_info(basic_layer['nodes_name'])
+# print(X.shape, y.shape)
+# print(X)
+# print(y)
+# PPPP
+
 X, y = normalize_data(X, y)
 train_data_dataset = GeneDataset(X, y)
 train_data = DataLoader(train_data_dataset, batch_size=args.batch_size)
