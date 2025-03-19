@@ -172,6 +172,9 @@ if __name__ == '__main__':
             # drug_dicts[line[0]]=line[1:]
             drug_dicts[line[0]] = line[1].strip().split() 
     json.dump(drug_dicts, open(args.out,'w'))
+
+
+    
  
 # print(drug_dicts)
 

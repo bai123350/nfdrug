@@ -22,7 +22,10 @@ class GeneDataset(Dataset):
 def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer, device, cox_weights_list):
 
     v1 = torch.ones(gene_adj.shape[1], device=device)
+    print(v1.shape)
     ori_gene = torch.sparse_coo_tensor(gene_adj, v1, size=(gene_num, gene_num))
+    print(ori_gene.shape)
+    print(ori_gene.to_dense())
 
     v2 = torch.ones(gene_adj2.shape[1], device=device)
     ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))

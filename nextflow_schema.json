@@ -192,6 +192,20 @@
                     "fa_icon": "fas fa-palette",
                     "hidden": true
                 },
+                "drug1":{
+                    "type": "string",
+                    "description": "drug1 need",
+                    "fa_icon": "fas fa-people-group",
+                    "help_text": "gene related drug",
+                    "hidden": true
+                },
+                "drug2":{
+                    "type": "string",
+                    "description": "drug2 need",
+                    "fa_icon": "fas fa-people-group",
+                    "help_text": "gene related drug",
+                    "hidden": true
+                },
                 "hook_url": {
                     "type": "string",
                     "description": "Incoming hook URL for messaging service",
