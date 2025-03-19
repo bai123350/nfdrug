@@ -11,6 +11,8 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+import pandas as pd
+import torch.optim as optim
 
 drug_dicts = {}
 with open('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/9_drug_targets_1.0_revised.tsv') as f:
@@ -34,13 +36,17 @@ with open('/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/ML_gene.csv') as 
         if index == 0: continue
         focus_genes_list.append(line.replace("\"","").split()[0])
 
+all_list_gene = pd.read_csv("/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Matrix.csv").iloc[:,0].to_list()
+
+
 drug_dicts = {}
 with open('/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/merged_common_names.csv') as f:
     for index , line in enumerate(f.readlines()):
         if index == 0: continue
         line = line.replace('"','').split(',')
         # drug_dicts[line[0]]=line[1:]
-        drug_dicts[line[0]] = line[1].strip().split()
+        drug_dicts[line[0]] = list(set([m for m in line[1].strip().split() if m in all_list_gene]))
+
 drug_gene_dicts = drug_dicts
 key1 = "Quercetin"
 key2 = "Troglitazone"
@@ -393,22 +399,24 @@ class BFRegNN(nn.Module):
         self.transfer_graph = transfer_layer.to_dense()
         self.inter_layer = InterLayer(in_dim, in_dim2)
 
-        self.graph2 = second_layer
+        self.graph2 = second_layer.to_dense()
         self.second_graph = IntraLayer(in_dim2, 4, 4, 4, "cat", "GCN")
 
         self.cox_aff = cox_affine(in_dim2)
 
 
     def forward(self, x):
-        print(x.shape)
+        print("第一步输入：",x.shape)
         x = x.unsqueeze(-1)
-        print(x.shape)
-
+        print("第一步输入增加：",x.shape)
         x = self.basic_graph(x, self.graph1)
-        print(x.shape)
+        print("第二步输出：",x.shape)
         x = self.inter_layer(x, self.transfer_graph)
+        print("第三步输出：",x.shape)
         x = self.second_graph(x, self.graph2)
+        print("第四步输出：",x.shape)
         x = self.cox_aff(x)
+        print("第五步输出：",x.shape)
 
         return x
 
@@ -458,7 +466,7 @@ def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer
     print(v1.shape)
     ori_gene = torch.sparse_coo_tensor(gene_adj, v1, size=(gene_num, gene_num))
 
-    ori_gene = max_indice_collapsed(ori_gene)
+    # ori_gene = max_indice_collapsed(ori_gene)
     # max_index = ori_gene.size(0) - 1
     # indices = ori_gene.coalesce().indices()
     # mask = indices >= max_index
@@ -499,9 +507,9 @@ def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer
 
     v2 = torch.ones(gene_adj2.shape[1], device=device)
     ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))
-    ori_gene2 = max_indice_collapsed(ori_gene2).to_dense()
-
-
+    # ori_gene2 = max_indice_collapsed(ori_gene2).to_dense()
+    print(v2)
+    print(ori_gene2)
 
     v3 = torch.ones(transfer_layer.shape[1], device=device)
     transfer_layer = torch.sparse_coo_tensor(transfer_layer, v3, size=(gene_num,gene_num2)).to_dense()
@@ -516,3 +524,49 @@ model = build_bfregNN_model(X.shape[1], cox_weights_list.shape[0],
                               device, cox_weights_list)
 
 print(model)
+optimizer = optim.Adam(model.parameters(), lr =1e-1, weight_decay = 1e-4)
+
+def train_model(model, train_data, optimizer, epoch, device):
+    patience = 500
+    patience_count = 0
+    global_loss = 0
+    global_con = 0
+
+    for e in range(epoch):
+        train_loss = 0
+        concordance = 0
+        for d in train_data:
+            optimizer.zero_grad()
+            data = d[0].float().to(device)
+            print(data.shape)
+            label = d[1].float().to(device)
+            event_label = label[:,0]
+            time_label = label[:,1]
+
+            loss = model(data, event_label, time_label)
+            print(loss.shape)
+            ttttt
+            loss = torch.mean(loss)
+            loss.backward()
+            optimizer.step()
+
+            train_loss += loss
+            concordance += model.concordance
+
+        train_loss /= len(train_data)
+        concordance /= len(train_data)
+
+        print(e, concordance.item(), train_loss.item())
+
+        if concordance > global_con:
+            global_con = concordance
+            global_loss = train_loss
+            patience_count = 0
+        else:
+            patience_count += 1
+            if patience_count == patience:
+                break
+
+    return global_loss.item(), global_con.item()
+
+loss, con_loss = train_model(model, train_data, optimizer, 200, device)
