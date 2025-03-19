@@ -545,7 +545,7 @@ def train_model(model, train_data, optimizer, epoch, device):
 
             loss = model(data, event_label, time_label)
             print(loss.shape)
-            ttttt
+            # ttttt
             loss = torch.mean(loss)
             loss.backward()
             optimizer.step()
