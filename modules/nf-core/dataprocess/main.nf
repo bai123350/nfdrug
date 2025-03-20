@@ -20,15 +20,29 @@ process DATAPROCESS {
     output:
     val(meta),  emit: meta_id
     path("*.json"), emit: json
+    path("*.npz"), emit: npz
+    path "versions.yml", emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
+    def prefix = task.ext.prefix ?: "${meta.id}_process"
+
     """
-    process.py --path ${reads[2]}  --out "drug.json"
+    process.py --path ${reads[2]}  --path1 ${reads[3]} --path2 ${reads[5]} --json ${json} --drug1 ${params.drug1} --drug2 ${params.drug2} --out  ${prefix}
+    
+    
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        networkx: \$(python -c "import networkx; print(networkx.__version__)")
+    END_VERSIONS
     """
 
     stub:
     """
     touch "drug.json"
-    
+    touch "tranfer.npz"
+    touch "versions.yml"
     """
 }

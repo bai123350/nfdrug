@@ -14,11 +14,11 @@ import math
 import pandas as pd
 import torch.optim as optim
 
-drug_dicts = {}
-with open('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/9_drug_targets_1.0_revised.tsv') as f:
-    for line in f.readlines():
-        line = line.split('\n')[0].split('\t')
-        drug_dicts[line[0]]=line[1:]
+# drug_dicts = {}
+# with open('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/9_drug_targets_1.0_revised.tsv') as f:
+#     for line in f.readlines():
+#         line = line.split('\n')[0].split('\t')
+#         drug_dicts[line[0]]=line[1:]
 
 global_graph = json.load(open("/home/bio-17/projects/drug/nf_drug/nfdrug/results/datafetch/res.json", 'r'))
 def trans_dicts2graph(graph_dicts):
@@ -420,12 +420,114 @@ class BFRegNN(nn.Module):
 
         return x
 
+# 这段代码定义了一个名为 `cox_module` 的 PyTorch 模块，
+# 用于实现 Cox 比例风险模型的负对数似然损失和一致性指数（Concordance Index）的计算。
+# 以下是对代码各部分的详细解释：
+
+# 类定义和初始化
+# `cox_module` 继承自 `nn.Module`，是一个自定义的 PyTorch 模块。
+class cox_module(nn.Module):
+    # 初始化方法，接收输入维度 `in_dim2` 和 Cox 权重列表 `cox_weights_list` 作为参数。
+    def __init__(self, in_dim2, cox_weights_list):
+        # 调用父类的初始化方法。
+        super().__init__()
+        # 保存输入维度作为基因数量。
+        self.gene_num = in_dim2
+        # 将 Cox 权重列表转换为 PyTorch 张量，并设置为不可训练（`requires_grad=False`）。
+        self.W = torch.tensor(cox_weights_list, requires_grad=False).float()
+
+    # 前向传播方法，计算负对数似然损失和一致性指数。
+    def forward(self, x, event, time, alpha=0, beta=0):
+        # 按时间降序排序，返回排序后的索引 `o`。
+        _, o = torch.sort(-time, dim=0, stable=True)
+        # 根据排序索引对事件标签进行排序。
+        my_event = event[o]
+        # 根据排序索引对输入特征进行排序。
+        x = x[o,:]
+        # 根据排序索引对时间进行排序。
+        my_time = time[o]
+        # 初始化损失为 0。
+        loss = 0
+        # 计算输入特征与 Cox 权重的矩阵乘法。
+        xw = torch.matmul(x, self.W.to(x.device))
+        # 调用 `neg_par_log_likelihood` 方法计算负对数似然损失、风险集总和、差异和预测值。
+        loss, risksets, diff, pred = self.neg_par_log_likelihood(xw, my_time, my_event)
+        # 计算损失的均值。
+        loss = loss.mean()
+        # 调用 `c_index` 方法计算一致性指数。
+        self.concordance = self.c_index(xw, my_time, my_event)
+        # 返回损失的扩展维度和其他相关信息。
+        return loss.unsqueeze(-1),(risksets, diff, pred, my_time, my_event)
+
+    # 计算负对数似然损失的方法。
+    def neg_par_log_likelihood(self,pred, ytime, yevent):
+        # 计算观察到的事件数量，并添加一个小的常数以避免除零错误。
+        n_observed = yevent.sum(0) + 1e-6
+        # 调用 `R_set` 方法生成时间指示矩阵。
+        ytime_indicator = self.R_set(ytime)
+        # 计算风险集总和。
+        risk_set_sum = ytime_indicator.mm(torch.exp(pred))
+        # 计算预测值与风险集总和对数的差异。
+        diff = pred - torch.log(risk_set_sum)
+        # 扩展事件标签的维度。
+        yevent = yevent.unsqueeze(-1)
+        # 计算观察到的事件中差异的总和。
+        sum_diff_in_observed = torch.transpose(diff, 0, 1).mm(yevent)
+        # 计算负对数似然损失。
+        cost = ( -(sum_diff_in_observed / n_observed)).reshape((-1,))
+        # 返回损失、风险集总和、差异和预测值。
+        return(cost,risk_set_sum,diff,pred)
+
+    # 计算一致性指数的方法。
+    def c_index(self, pred, ytime, yevent):
+        # 获取样本数量。
+        n_sample = len(ytime)
+        # 调用 `R_set` 方法生成时间指示矩阵。
+        ytime_indicator = self.R_set(ytime)
+        # 移除时间指示矩阵的对角线元素。
+        ytime_matrix = ytime_indicator - torch.diag(torch.diag(ytime_indicator))
+        # 找到未发生事件（被删失）的样本索引。
+        censor_idx = (yevent == 0).nonzero()
+        # 创建一个全零张量。
+        zeros = torch.zeros(n_sample).to(ytime_matrix.device)
+        # 将被删失样本对应的行设置为零。
+        ytime_matrix[censor_idx, :] = zeros
+        # 创建一个与时间矩阵形状相同的全零矩阵。
+        pred_matrix = torch.zeros_like(ytime_matrix)
+        # 计算预测值之间的差异。
+        pred_diffs = pred - pred.T
+        # 如果预测值差异大于 0，则将预测矩阵对应位置设置为 1。
+        pred_matrix[pred_diffs > 0] = 1
+        # 如果预测值差异等于 0，则将预测矩阵对应位置设置为 0.5。
+        pred_matrix[pred_diffs == 0] = 0.5
+        # 计算一致性矩阵。
+        concord_matrix = pred_matrix.mul(ytime_matrix)
+        # 计算一致性矩阵的总和。
+        concord = torch.sum(concord_matrix)
+        # 计算分母，添加一个小的常数以避免除零错误。
+        epsilon = torch.sum(ytime_matrix) + 1e-6
+        # 计算一致性指数。
+        concordance_index = torch.div(concord, epsilon)
+        # 返回一致性指数。
+        return concordance_index
+
+    # 生成时间指示矩阵的方法。
+    def R_set(self,x):
+        # 获取样本数量。
+        n_sample = x.shape[0]
+        # 创建一个全 1 矩阵。
+        matrix_ones = torch.ones(n_sample, n_sample).to(x.device)
+        # 生成下三角矩阵作为时间指示矩阵。
+        indicator_matrix = torch.tril(matrix_ones).to(x.device)
+        # 返回时间指示矩阵。
+        return(indicator_matrix)
+
 
 class BFRegNN_COX(nn.Module):
     def __init__(self, in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer, cox_weights_list):
         super().__init__()
         self.bfregNN = BFRegNN(in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer)
-        # self.neg_module = cox_module(in_dim2, cox_weights_list)
+        self.neg_module = cox_module(in_dim2, cox_weights_list)
 
     def forward(self, x, event, time):
         x = self.bfregNN(x)

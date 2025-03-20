@@ -33,8 +33,28 @@
                 "exists": true,
                  "pattern": "^\\S+$",
                 "errorMessage": "druggene must be provided and cannot contain spaces"
+            },
+            "matrix":{
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                 "pattern": "^\\S+$",
+                "errorMessage": "matrix must be provided and cannot contain spaces"
+            },
+            "group":{
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                 "pattern": "^\\S+$",
+                "errorMessage": "group must be provided and cannot contain spaces"
+            },
+            "mlgene":{
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                 "pattern": "^\\S+$",
+                "errorMessage": "mlgene must be provided and cannot contain spaces"
             }
-
         },
         "required": ["id", "protein1"]
     }

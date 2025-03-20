@@ -81,14 +81,14 @@ workflow PIPELINE_INITIALISATION {
     Channel
         .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
         .map {
-            meta, protein1, protein2, druggene ->
+            meta, protein1, protein2, druggene, matrix, group, mlgene ->
                 if (!protein2) {
                     return [ meta.id, meta + [ single_end:true ], [ protein1 ] ]
                 } else if (!druggene) {
                     return [ meta.id, meta + [ single_end:true ], [ protein1, protein2 ] ]
                 }
                 else {
-                    return [ meta.id, meta + [ single_end:false ], [ protein1, protein2 ,druggene] ]
+                    return [ meta.id, meta + [ single_end:false ], [ protein1, protein2 ,druggene,matrix,group,mlgene] ]
                 }
         }
         .groupTuple()
