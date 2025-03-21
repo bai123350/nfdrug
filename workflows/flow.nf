@@ -35,7 +35,7 @@ workflow RUNDATA {
     )
 
     MODELS (
-        samplesheet,json
+        samplesheet
     )
 
 

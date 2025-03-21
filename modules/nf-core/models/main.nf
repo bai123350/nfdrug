@@ -8,7 +8,6 @@ process MODELS {
 
     input:
     tuple val(meta), val(reads)
-    path(json)
 
     output:
     tuple val(meta), path("${meta.sample}.models.tsv")
