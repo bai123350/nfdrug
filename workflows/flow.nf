@@ -1,8 +1,6 @@
 
 
 
-// include {} from '../modules/nf-core/models/main'
-
 include { DATATETCH               } from '../modules/nf-core/datafetch/main'
 include { DATAPROCESS             } from '../modules/nf-core/dataprocess/main'
 include { MODELS                  } from '../modules/nf-core/models/main.nf'

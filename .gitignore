@@ -10,3 +10,6 @@ null/
 workspace/
 codes/
 tmp/
+tests/
+.nf-test/
+.nf-test.log

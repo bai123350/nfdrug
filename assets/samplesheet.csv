@@ -1,3 +1,3 @@
 id,protein1,protein2,druggene,matrix,group,mlgene
-sample1,/home/bio-17/projects/drug/nf_drug/nfdrug/data/9606.protein.info.v11.5.txt,/home/bio-17/projects/drug/nf_drug/nfdrug/data/9606.protein.links.full.v11.5.txt,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/merged_common_names.csv,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Matrix.csv,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Group.csv,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/ML_gene.csv
+sample1,data/9606.protein.info.v11.5.txt,data/9606.protein.links.full.v11.5.txt,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/merged_common_names.csv,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Matrix.csv,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Group.csv,/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/ML_gene.csv
 
