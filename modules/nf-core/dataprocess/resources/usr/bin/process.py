@@ -284,7 +284,9 @@ if __name__ == "__main__":
     basic_layer_adj = np.array(basic_layer_graph['edges']).T
     second_layer_adj = np.array(second_layer_graph['edges']).T
 
-    np.savez(f"{args.out}_transfer.npz", trans_layer=transfer_layer)
+    np.savez(f"{args.out}_transfer.npz", trans_layer=transfer_layer,
+             basic_layer_adj=basic_layer_adj, second_layer_adj=second_layer_adj)
+    json.dump(basic_layer_graph, open(f"{args.out}_basic.json", "w"))
 
 
 
