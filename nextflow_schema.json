@@ -206,6 +206,13 @@
                     "help_text": "gene related drug",
                     "hidden": true
                 },
+                "disea":{
+                    "type": "string",
+                    "description": "disea need",
+                    "fa_icon": "fas fa-people-group",
+                    "help_text": "disea example DKD",
+                    "hidden": true
+                },
                 "hook_url": {
                     "type": "string",
                     "description": "Incoming hook URL for messaging service",

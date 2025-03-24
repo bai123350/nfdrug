@@ -32,9 +32,10 @@ workflow RUNDATA {
        samplesheet,json
     )
 
+
     MODELS (
-        samplesheet
-    )
+         samplesheet,DATAPROCESS.out.json, DATAPROCESS.out.npz
+     )
 
 
 
