@@ -34,8 +34,9 @@ process MODELS {
     """
 
     stub:
+    def prefix = task.ext.prefix ?: "${meta.id}_models"
     """
-    touch "models.npz"
+    touch "${prefix}_models.npz"
     touch "versions.yml"
     """
 

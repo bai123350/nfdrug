@@ -527,10 +527,17 @@ class BFRegNN_COX(nn.Module):
     def __init__(self, in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer, cox_weights_list):
         super().__init__()
         self.bfregNN = BFRegNN(in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer)
-        self.neg_module = cox_module(in_dim2, cox_weights_list)
+        # self.neg_module = cox_module(in_dim2, cox_weights_list)
+        self.sig  = nn.Sigmoid()
+        self.flat = nn.Flatten()
+        self.linear = nn.Linear(in_dim2,1)
+
 
     def forward(self, x, event, time):
         x = self.bfregNN(x)
+        x = self.sig(self.flat(self.linear(x)).squeeze(-1))
+        print(x)
+        print("x 的sigmoid" + str(x.shape))
         # loss = self.neg_module(x, event, time)
         # self.concordance = self.neg_module.concordance
 
@@ -627,6 +634,7 @@ model = build_bfregNN_model(X.shape[1], cox_weights_list.shape[0],
 
 print(model)
 optimizer = optim.Adam(model.parameters(), lr =1e-1, weight_decay = 1e-4)
+cross = nn.CrossEntropyLoss()
 
 def train_model(model, train_data, optimizer, epoch, device):
     patience = 500
@@ -643,32 +651,35 @@ def train_model(model, train_data, optimizer, epoch, device):
             print(data.shape)
             label = d[1].float().to(device)
             event_label = label[:,0]
+            print(event_label.shape)
             time_label = label[:,1]
 
-            loss = model(data, event_label, time_label)
-            print(loss.shape)
+            pred = model(data, event_label, time_label)
+            loss = cross(pred, event_label)
+            print(loss)
             # ttttt
-            loss = torch.mean(loss)
+            # loss = torch.mean(loss)
             loss.backward()
             optimizer.step()
 
             train_loss += loss
-            concordance += model.concordance
+            # concordance += model.concordance
 
         train_loss /= len(train_data)
-        concordance /= len(train_data)
+        print(train_loss)
+        # concordance /= len(train_data)
 
-        print(e, concordance.item(), train_loss.item())
+        # print(e, concordance.item(), train_loss.item())
 
-        if concordance > global_con:
-            global_con = concordance
-            global_loss = train_loss
-            patience_count = 0
-        else:
-            patience_count += 1
-            if patience_count == patience:
-                break
+        # if concordance > global_con:
+        #     global_con = concordance
+        #     global_loss = train_loss
+        #     patience_count = 0
+        # else:
+        #     patience_count += 1
+        #     if patience_count == patience:
+        #         break
 
-    return global_loss.item(), global_con.item()
+    return train_loss#global_loss.item(), global_con.item()
 
-loss, con_loss = train_model(model, train_data, optimizer, 200, device)
+loss = train_model(model, train_data, optimizer, 200, device)

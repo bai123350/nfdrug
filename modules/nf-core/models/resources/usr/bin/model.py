@@ -4,6 +4,9 @@ import argparse
 import json
 import csv
 import numpy as np
+from sklearn import preprocessing
+from torch.utils.data import DataLoader
+from net import *
 
 
 class DataSET(object):
@@ -80,6 +83,11 @@ class AllData(object):
         y_data = np.concatenate((y_data_label, y_data_time), axis=0).T
         return x_data, y_data_label, y_data
 
+class Utils(object):
+    def normalize_data(X, y):
+        scaler = preprocessing.StandardScaler().fit(X)
+        X_transformed = scaler.transform(X)
+        return X_transformed, y
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -87,6 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--path2", type=str, default="basic_layer_graph.json")
     parser.add_argument("--group", type=str, default="group.txt")
     parser.add_argument("--disea", type=str, default="DKD")
+    parser.add_argument("--batch", type=int, default=10)
     parser.add_argument('--out', type=str, default='xy')
     args = parser.parse_args()
 
@@ -95,3 +104,13 @@ if __name__ == "__main__":
 
     x_data, y_data_label, y_data = AllData().pall_data(x_sample_id_list, X_all,y_survival)
     np.savez(f"{args.out}_all.npz", x_data = x_data, y_data_label = y_data_label, y_data = y_data)
+    
+    X, y = Utils().normalize_data(x_data, y_data)
+
+    train_data_dataset = GeneDataset(X, y)
+    train_data = DataLoader(train_data_dataset, batch_size=args.batch)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    
+
