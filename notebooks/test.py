@@ -633,8 +633,26 @@ model = build_bfregNN_model(X.shape[1], cox_weights_list.shape[0],
                               device, cox_weights_list)
 
 print(model)
-optimizer = optim.Adam(model.parameters(), lr =1e-1, weight_decay = 1e-4)
+optimizer = optim.Adam(model.parameters(), lr =1e-4, weight_decay = 1e-4)
 cross = nn.CrossEntropyLoss()
+
+def calculate_accuracy(pred, event_label):
+    """
+    计算准确率
+    :param pred: 模型输出的预测值（范围在 0 到 1 之间）
+    :param event_label: 真实标签（0 或 1）
+    :return: 准确率
+    """
+    # 将 pred 中的值转换为 0 或 1
+    pred_labels = (pred >= 0.5).float()  # 大于等于 0.5 为 1，否则为 0
+
+    # 计算预测正确的样本数
+    correct = (pred_labels == event_label).sum().item()
+
+    # 计算准确率
+    accuracy = correct / event_label.size(0)
+
+    return accuracy
 
 def train_model(model, train_data, optimizer, epoch, device):
     patience = 500
@@ -642,44 +660,157 @@ def train_model(model, train_data, optimizer, epoch, device):
     global_loss = 0
     global_con = 0
 
+    losses = []  # 保存每个 epoch 的损失
+    accuracies = []  # 保存每个 epoch 的准确率
+
     for e in range(epoch):
         train_loss = 0
-        concordance = 0
+        total_correct = 0
+        total_samples = 0
+
         for d in train_data:
             optimizer.zero_grad()
             data = d[0].float().to(device)
-            print(data.shape)
             label = d[1].float().to(device)
-            event_label = label[:,0]
-            print(event_label.shape)
-            time_label = label[:,1]
+            event_label = label[:, 0]
+            time_label = label[:, 1]
 
             pred = model(data, event_label, time_label)
+
+            # 计算损失
             loss = cross(pred, event_label)
-            print(loss)
-            # ttttt
-            # loss = torch.mean(loss)
             loss.backward()
             optimizer.step()
 
-            train_loss += loss
-            # concordance += model.concordance
+            train_loss += loss.item()
 
-        train_loss /= len(train_data)
-        print(train_loss)
-        # concordance /= len(train_data)
+            # 计算准确率
+            pred_labels = (pred >= 0.5).float()  # 将预测值转换为 0 或 1
+            correct = (pred_labels == event_label).sum().item()
+            total_correct += correct
+            total_samples += event_label.size(0)
 
-        # print(e, concordance.item(), train_loss.item())
+        # 计算平均损失和准确率
+        avg_loss = train_loss / len(train_data)
+        avg_accuracy = total_correct / total_samples
 
-        # if concordance > global_con:
-        #     global_con = concordance
-        #     global_loss = train_loss
-        #     patience_count = 0
-        # else:
-        #     patience_count += 1
-        #     if patience_count == patience:
-        #         break
+        # 保存当前 epoch 的损失和准确率
+        losses.append(avg_loss)
+        accuracies.append(avg_accuracy)
 
-    return train_loss#global_loss.item(), global_con.item()
+        print(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
 
-loss = train_model(model, train_data, optimizer, 200, device)
+    return losses, accuracies
+# def train_model(model, train_data, optimizer, epoch, device):
+#     patience = 500
+#     patience_count = 0
+#     global_loss = 0
+#     global_con = 0
+
+#     losses = []  # 保存每个 epoch 的损失
+#     accuracies = []  # 保存每个 epoch 的准确率
+
+#     for e in range(epoch):
+#         train_loss = 0
+#         correct = 0
+#         total = 0
+
+#         for d in train_data:
+#             optimizer.zero_grad()
+#             data = d[0].float().to(device)
+#             label = d[1].float().to(device)
+#             event_label = label[:, 0]
+#             time_label = label[:, 1]
+
+#             pred = model(data, event_label, time_label)
+
+#             # 计算损失
+#             loss = cross(pred, event_label)
+#             loss.backward()
+#             optimizer.step()
+
+#             train_loss += loss.item()
+
+#             # 计算准确率
+#             accuracy = calculate_accuracy(pred, event_label)
+#             accuracies.append(accuracy)
+
+#         # 计算平均损失
+#         train_loss /= len(train_data)
+#         losses.append(train_loss)
+
+#         # accuracies.append(accuracy)
+
+#         print(f"Epoch {e + 1}, Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}")
+
+#     return losses, accuracies
+
+# def train_model(model, train_data, optimizer, epoch, device):
+#     patience = 500
+#     patience_count = 0
+#     global_loss = 0
+#     global_con = 0
+
+#     for e in range(epoch):
+#         train_loss = 0
+#         concordance = 0
+#         for d in train_data:
+#             optimizer.zero_grad()
+#             data = d[0].float().to(device)
+#             print(data.shape)
+#             label = d[1].float().to(device)
+#             event_label = label[:,0]
+#             print(event_label.shape)
+#             time_label = label[:,1]
+
+#             pred = model(data, event_label, time_label)
+#             print("pred" + str(pred))
+#             print("event_label" + str(event_label))
+
+#             correct = (pred.round() == event_label).sum().item()
+#             accuracy = correct / event_label.size(0)
+#             loss = cross(pred, event_label)
+#             print(loss)
+
+#             loss.backward()
+#             optimizer.step()
+
+#             train_loss += loss.item()
+
+
+
+#         if e == 0:
+#             losses = []
+#             accuracies = []
+
+#         losses.append(train_loss)
+#         accuracies.append(accuracy)
+
+
+
+#     return losses,accuracies#global_loss.item(), global_con.item()
+
+loss,acc = train_model(model, train_data, optimizer, 2000, device)
+
+
+import matplotlib.pyplot as plt
+
+loss = [round(float(i), 2) for i in loss]
+plt.figure(figsize=(10, 5))
+plt.subplot(1, 2, 1)
+plt.plot(loss, label="Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Training Loss")
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(acc, label="acc")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title("Training Accuracy")
+plt.legend()
+
+
+plt.tight_layout()
+plt.show()

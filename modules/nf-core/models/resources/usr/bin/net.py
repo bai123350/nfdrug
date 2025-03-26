@@ -137,7 +137,6 @@ class BFRegNN_COX(nn.Module):
     
 
 
-
 class BuildModel(object):
     def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2,
                             transfer_layer, device, cox_weights_list):
