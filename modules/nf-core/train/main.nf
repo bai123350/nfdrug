@@ -16,7 +16,7 @@ process TRAIN {
 
     script:
     """
-    python ${moduleDir}/train.py \
+    train.py \
     --meta ${meta} \
     --reads ${reads} \
     --json ${json1} \
