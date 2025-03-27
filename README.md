@@ -13,7 +13,29 @@
 ## Introduction
 
 
-
+```mermaid
+flowchart TB
+    subgraph RUNDATA
+    subgraph take
+    v0["samplesheet"]
+    end
+    v3([DATATETCH])
+    v6([DATAPROCESS])
+    v7([MODELS])
+    v8([TRAIN])
+    subgraph emit
+    v9["json_report"]
+    end
+    v0 --> v3
+    v0 --> v6
+    v3 --> v6
+    v0 --> v7
+    v6 --> v7
+    v0 --> v8
+    v6 --> v8
+    v3 --> v9
+    end
+```
 
 
 ## Usage

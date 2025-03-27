@@ -4,6 +4,7 @@
 include { DATATETCH               } from '../modules/nf-core/datafetch/main'
 include { DATAPROCESS             } from '../modules/nf-core/dataprocess/main'
 include { MODELS                  } from '../modules/nf-core/models/main.nf'
+include { TRAIN                   } from '../modules/nf-core/train/main.nf'
 
 
 
@@ -36,6 +37,10 @@ workflow RUNDATA {
     MODELS (
          samplesheet,DATAPROCESS.out.json, DATAPROCESS.out.npz
      )
+
+    TRAIN (
+        samplesheet,DATAPROCESS.out.json, DATAPROCESS.out.npz
+    )
 
 
 
