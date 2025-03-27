@@ -14,6 +14,20 @@ import math
 import pandas as pd
 import torch.optim as optim
 
+
+def set_seed(seed):
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+set_seed(222222)
+
 # drug_dicts = {}
 # with open('/home/bio-17/projects/drug/nf_drug/nfdrug/codes/BFregNN-Cox-for-pyroptosis-in-TNBC/data/9_drug_targets_1.0_revised.tsv') as f:
 #     for line in f.readlines():
@@ -535,7 +549,7 @@ class BFRegNN_COX(nn.Module):
 
     def forward(self, x, event, time):
         x = self.bfregNN(x)
-        x = self.sig(self.flat(self.linear(x)).squeeze(-1))
+        x = self.sig(self.linear(x).squeeze(-1))
         print(x)
         print("x 的sigmoid" + str(x.shape))
         # loss = self.neg_module(x, event, time)
@@ -631,6 +645,7 @@ def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer
 model = build_bfregNN_model(X.shape[1], cox_weights_list.shape[0],
                             basic_layer_adj, second_layer_adj, transfer_layer,
                               device, cox_weights_list)
+
 
 print(model)
 optimizer = optim.Adam(model.parameters(), lr =1e-4, weight_decay = 1e-4)
@@ -813,4 +828,5 @@ plt.legend()
 
 
 plt.tight_layout()
-plt.show()
+# plt.show()
+plt.savefig("/home/bio-17/projects/drug/nf_drug/nfdrug/notebooks/loss_acc.pdf")

@@ -127,12 +127,16 @@ class BFRegNN(nn.Module):
         return x
 
 class BFRegNN_COX(nn.Module):
-    def __init__(self, in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer, cox_weights_list):
+    def __init__(self, in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer):
         super().__init__()
         self.bfregNN = BFRegNN(in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer)
+        self.sig  = nn.Sigmoid()
+        self.flat = nn.Flatten()
+        self.linear = nn.Linear(in_dim2,1)
 
     def forward(self, x, event, time):
         x = self.bfregNN(x)
+        x = self.sig(self.flat(self.linear(x)).squeeze(-1))
         return x
     
 
