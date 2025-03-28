@@ -14,8 +14,6 @@ workflow RUNDATA {
 
     main:
     // WORKFLOW: Run pipeline
-    // MOLFLOW (
-    //     samplesheet
     ch_versions = Channel.empty()
     ch_multiqc_files = Channel.empty()
 
@@ -24,25 +22,17 @@ workflow RUNDATA {
         samplesheet
     )
 
-    // println(res_json)
-    // Output the results of DATATETCH
-    // DATATETCH.out.json.view()
-
-    // json.view()
     DATAPROCESS (
        samplesheet,json
     )
-
 
     MODELS (
          samplesheet,DATAPROCESS.out.json, DATAPROCESS.out.npz
      )
 
     TRAIN (
-        samplesheet,DATAPROCESS.out.json, DATAPROCESS.out.npz
+        samplesheet,MODELS.out.pt, DATAPROCESS.out.npz
     )
-
-
 
 
     emit:
