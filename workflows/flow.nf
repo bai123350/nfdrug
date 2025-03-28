@@ -1,10 +1,10 @@
 
 
 
-include { DATATETCH               } from '../modules/nf-core/datafetch/main'
-include { DATAPROCESS             } from '../modules/nf-core/dataprocess/main'
-include { MODELS                  } from '../modules/nf-core/models/main.nf'
-include { TRAIN                   } from '../modules/nf-core/train/main.nf'
+include { DATATETCH               } from '../modules/local/datafetch/main'
+include { DATAPROCESS             } from '../modules/local/dataprocess/main'
+include { MODELS                  } from '../modules/local/models/main'
+include { TRAIN                   } from '../modules/local/train/main'
 
 
 
