@@ -1,8 +1,7 @@
-include { DATATETCH               } from '../modules/local/datafetch/main'
-include { DATAPROCESS             } from '../modules/local/dataprocess/main'
-include { MODELS                  } from '../modules/local/models/main'
-include { TRAIN                   } from '../modules/local/train/main'
-include { DATATETCH } from '../modules/nf-core/datafetch/main.nf'
+include { DATATETCH   } from '../modules/local/datafetch/main'
+include { DATAPROCESS } from '../modules/local/dataprocess/main'
+include { MODELS      } from '../modules/local/models/main'
+include { TRAIN       } from '../modules/local/train/main'
 
 
 
@@ -16,23 +15,28 @@ workflow RUNDATA {
     ch_multiqc_files = Channel.empty()
 
     // MODULE: Run DATATETCH
-    DATATETCH (
+    // println(samplesheet.map { meta, protein1, protein2, _mo -> [meta, protein1, protein2] })
+    DATATETCH(
         samplesheet
     )
 
-    DATAPROCESS (
-       samplesheet, DATATETCH.out.json
+    DATAPROCESS(
+        samplesheet,
+        DATATETCH.out.json,
     )
 
-    MODELS (
-         samplesheet,DATAPROCESS.out.json, DATAPROCESS.out.npz
-     )
-
-    TRAIN (
-        samplesheet,MODELS.out.pt, DATAPROCESS.out.npz
+    MODELS(
+        samplesheet,
+        DATAPROCESS.out.json,
+        DATAPROCESS.out.npz,
     )
 
+    TRAIN(
+        samplesheet,
+        MODELS.out.pt,
+        DATAPROCESS.out.npz,
+    )
 
-    emit:
-    json_report = DATATETCH.out.json // channel: /path/to/multiqc_report.html
+    // emit:
+    // json_report = DATATETCH.out.json // channel: /path/to/multiqc_report.html
 }
