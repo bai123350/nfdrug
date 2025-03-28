@@ -2,6 +2,7 @@ include { DATATETCH               } from '../modules/local/datafetch/main'
 include { DATAPROCESS             } from '../modules/local/dataprocess/main'
 include { MODELS                  } from '../modules/local/models/main'
 include { TRAIN                   } from '../modules/local/train/main'
+include { DATATETCH } from '../modules/nf-core/datafetch/main.nf'
 
 
 
@@ -15,12 +16,12 @@ workflow RUNDATA {
     ch_multiqc_files = Channel.empty()
 
     // MODULE: Run DATATETCH
-    (meta_id,json) = DATATETCH (
+    DATATETCH (
         samplesheet
     )
 
     DATAPROCESS (
-       samplesheet,json
+       samplesheet, DATATETCH.out.json
     )
 
     MODELS (

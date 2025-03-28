@@ -4,10 +4,9 @@ process DATATETCH {
 
     conda "${moduleDir}/environment.yml"
 
-    // container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-    //     'docker://kjd12/pyhtonbio:1.0' :
-    //     'kjd12/pyhtonbio:1.0' }"
-
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'docker://kjd12/pyhtonbio:1.0' :
+        'kjd12/pyhtonbio:1.0' }"
 
     publishDir "${params.outdir}/datafetch", mode: 'copy'
 
@@ -17,8 +16,6 @@ process DATATETCH {
     output:
     val(meta),  emit: meta_id
     path("*.json"), emit: json
-    // tuple val(meta), path("*.zip") , emit: zip
-    // path  "versions.yml"           , emit: versions
 
     script:
     """
