@@ -31,7 +31,7 @@ process TRAIN {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         numpy: \$(python -c "import numpy; print(numpy.__version__)")
-        torch: \$(python -c "import torch; print(torch.__version__)")
+        torch: \$(python -c "import torch; print(torch.__version__,torch.cuda.is_available())")
     END_VERSIONS
     """
 
