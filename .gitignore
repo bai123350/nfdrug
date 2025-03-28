@@ -13,3 +13,4 @@ tmp/
 /tests/
 .nf-test/
 .nf-test.log
+.__pycache__/
