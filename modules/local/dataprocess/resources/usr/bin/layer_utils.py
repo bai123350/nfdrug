@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 from copy import deepcopy
 import networkx as nx
@@ -69,7 +71,7 @@ class LayerUtils:
         return removed
 
     @staticmethod
-    def shortest_path(G: nx.Graph, source: str, target: str) -> float:
+    def shortest_path(G: nx.Graph, source: str, target: str) -> int:
         try:
             num = nx.shortest_path_length(G, source, target)
         except:

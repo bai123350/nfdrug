@@ -22,8 +22,8 @@ def set_seed(seed):
 
 def train_model(model, train_data, optimizer, epoch, device):
 
-    losses = []  
-    accuracies = []  
+    losses = []
+    accuracies = []
 
     for e in range(epoch):
         train_loss = 0
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     parser.add_argument("--m", type=str,  help="number of epochs")
     args = parser.parse_args()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     model = torch.load(args.model)
     train_data = torch.load(args.train)
@@ -104,5 +104,5 @@ if __name__ == "__main__":
 
     loss,acc = train_model(model, train_data, optimizer, 2000, device)
     plot(loss,acc,args.m)
-    
+
 

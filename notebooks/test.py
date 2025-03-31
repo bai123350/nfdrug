@@ -318,7 +318,7 @@ for g in second_layer_graph['nodes_name']:
 cox_weights_list = np.array(cox_weights_list)
 cox_weights_list = np.expand_dims(cox_weights_list, axis=1)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
 class GCN(nn.Module):
@@ -582,6 +582,16 @@ def max_indice_collapsed(ori_gene):
 
 
 def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer, device, cox_weights_list):
+
+    print(f"Input dimensions:")
+    print(f"gene_num: {gene_num}, gene_num2: {gene_num2}")
+    print(f"gene_adj shape: {gene_adj.shape}")
+    print(f"gene_adj2 shape: {gene_adj2.shape}")
+    print(f"transfer_layer shape: {transfer_layer.shape}")
+
+    # 检查索引是否有效
+    print(f"gene_adj max index: {gene_adj.max()}")
+    print(f"gene_adj2 max index: {gene_adj2.max()}")
 
     # device = torch.device("cpu")
 

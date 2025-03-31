@@ -41,7 +41,7 @@ class Process:
             for index, line in enumerate(f.readlines()):
                 if index == 0:
                     continue
-                focus_genes_list.append(line.replace('"', "").split()[0])
+                focus_genes_list.append(line.replace('\"', "").split()[0])
         return focus_genes_list
 
     def _load_drug_dicts(self, all_list_gene):

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import networkx as nx
 import numpy as np
 from copy import deepcopy
@@ -21,7 +23,7 @@ class GraphUtils:
         return G
 
     @staticmethod
-    def shortest_path(G: nx.Graph, source: str, target: str) -> float:
+    def shortest_path(G: nx.Graph, source: str, target: str) -> int:
         """
         计算图中从源节点到目标节点的最短路径长度。
 

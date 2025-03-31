@@ -99,32 +99,69 @@ class cox_affine(nn.Module):
         x = self.aff(x)
         x = x.squeeze()
         return x
-    
 
+
+
+# class BFRegNN(nn.Module):
+#     def __init__(self, in_dim, in_dim2, n_hid, basic_layer, transfer_layer, second_layer):
+#         super().__init__()
+
+#         self.graph1 = basic_layer.to_dense()
+#         self.basic_graph = IntraLayer(in_dim, 1, 4, 4, "cat", "GCN")
+
+#         self.transfer_graph = transfer_layer.to_dense()
+#         self.inter_layer = InterLayer(in_dim, in_dim2)
+
+#         # print("second layer",second_layer)
+#         self.graph2 = second_layer.to_dense()
+#         self.second_graph = IntraLayer(in_dim2, 4, 4, 4, "cat", "GCN")
+
+#         self.cox_aff = cox_affine(in_dim2)
+
+
+#     def forward(self, x):
+#         x = x.unsqueeze(-1)
+#         print("x",x.shape)
+#         x = self.basic_graph(x, self.graph1)
+#         print("x2",x.shape)
+#         x = self.inter_layer(x, self.transfer_graph)
+#         print("x3",x.shape)
+#         x = self.second_graph(x, self.graph2)
+#         print("x4",x.shape)
+#         x = self.cox_aff(x)
+#         return x
 
 class BFRegNN(nn.Module):
     def __init__(self, in_dim, in_dim2, n_hid, basic_layer, transfer_layer, second_layer):
         super().__init__()
 
-        self.graph1 = basic_layer.to_dense()
-        self.basic_graph = IntraLayer(in_dim, 1, 4, 4, "cat", "GCN")
+        print(f"\nBFRegNN initialization:")
+        print(f"in_dim: {in_dim}, in_dim2: {in_dim2}")
+        print(f"basic_layer shape: {basic_layer.shape}")
+        print(f"transfer_layer shape: {transfer_layer.shape}")
+        print(f"second_layer shape: {second_layer.shape}")
 
-        self.transfer_graph = transfer_layer.to_dense()
-        self.inter_layer = InterLayer(in_dim, in_dim2)
+        try:
+            self.graph1 = basic_layer.to_dense() if basic_layer.is_sparse else basic_layer
+            print(f"graph1 shape: {self.graph1.shape}")
 
-        self.graph2 = second_layer.to_dense()
-        self.second_graph = IntraLayer(in_dim2, 4, 4, 4, "cat", "GCN")
+            self.basic_graph = IntraLayer(in_dim, 1, 4, 4, "cat", "GCN")
 
-        self.cox_aff = cox_affine(in_dim2)
+            self.transfer_graph = transfer_layer
+            print(f"transfer_graph shape: {self.transfer_graph.shape}")
 
+            self.inter_layer = InterLayer(in_dim, in_dim2)
 
-    def forward(self, x):
-        x = x.unsqueeze(-1)
-        x = self.basic_graph(x, self.graph1)
-        x = self.inter_layer(x, self.transfer_graph)
-        x = self.second_graph(x, self.graph2)
-        x = self.cox_aff(x)
-        return x
+            print("Converting second_layer to dense...")
+            self.graph2 = second_layer.to_dense() if second_layer.is_sparse else second_layer
+            print(f"graph2 shape: {self.graph2.shape}")
+
+            self.second_graph = IntraLayer(in_dim2, 4, 4, 4, "cat", "GCN")
+            self.cox_aff = cox_affine(in_dim2)
+
+        except Exception as e:
+            print(f"Error in BFRegNN initialization: {str(e)}")
+            raise
 
 class BFRegNN_COX(nn.Module):
     def __init__(self, in_dim, in_dim2, n_hid, graphs1, transfer_layer, second_layer):
@@ -138,20 +175,21 @@ class BFRegNN_COX(nn.Module):
         x = self.bfregNN(x)
         x = self.sig(self.flat(self.linear(x)).squeeze(-1))
         return x
-    
+
 
 
 class BuildModel(object):
     def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2,
-                            transfer_layer, device, cox_weights_list):
+                            transfer_layer, device):
         v1 = torch.ones(gene_adj.shape[1], device=device)
         ori_gene = torch.sparse_coo_tensor(gene_adj, v1, size=(gene_num, gene_num))
 
         v2 = torch.ones(gene_adj2.shape[1], device=device)
         ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))
+        print("ori gene2",ori_gene2)
 
         v3 = torch.ones(transfer_layer.shape[1], device=device)
         transfer_layer = torch.sparse_coo_tensor(transfer_layer, v3, size=(gene_num,gene_num2)).to_dense()
 
-        model = BFRegNN_COX(gene_num, gene_num2, 64, ori_gene, transfer_layer, ori_gene2, cox_weights_list).to(device)
+        model = BFRegNN_COX(gene_num, gene_num2, 64, ori_gene, transfer_layer, ori_gene2).to(device)
         return model
