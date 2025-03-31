@@ -159,53 +159,87 @@ def select_subgraph(graph_dicts: dict, gene_list: list) -> dict:
     return return_graph_dicts
 
 
-def count_degree(graph_dicts, gene_list):
-    degree_list = []
-    return_graph_dicts = {}
-    return_graph_dicts["edges"] = []
+def count_degree(graph_dicts:dict, gene_list:list) -> list:
+    """
+    计算基因列表中每个基因的度（degree），并返回一个包含度的列表。
+
+    参数:
+    graph_dicts (dict): 一个字典，表示图的邻接表。键是基因，值是与该基因相连的基因列表。
+    gene_list (list): 一个基因列表，表示需要计算度的基因。
+
+    返回值:
+    list: 一个包含每个基因度的列表，顺序与gene_list中的基因顺序一致。
+    """
+    degree_list = []  # 用于存储每个基因的度
+    return_graph_dicts = {}  # 用于存储返回的图信息
+    return_graph_dicts["edges"] = []  # 初始化边的列表
+
+    # 遍历基因列表，计算每个基因的度
     for idx, g in enumerate(gene_list):
-        degree_list.append(0)
-        if g in graph_dicts:
+        degree_list.append(0)  # 初始化当前基因的度为0
+        if g in graph_dicts:  # 如果当前基因在图的邻接表中
+            # 遍历与当前基因相连的所有基因
             for end_nodes in graph_dicts[g]:
+                # 如果相连的基因在gene_list中，并且这条边还没有被记录
                 if (
                     end_nodes in gene_list
                     and [idx, gene_list.index(end_nodes)]
                     not in return_graph_dicts["edges"]
                 ):
+                    # 记录这条边，并增加当前基因的度
                     return_graph_dicts["edges"].append(
                         [idx, gene_list.index(end_nodes)]
                     )
                     degree_list[idx] += 1
-    return degree_list
+
+    return degree_list  # 返回包含每个基因度的列表
+
 
 def max_connect(basic_layer,second_layer,transfer_layer):
-        G = nx.Graph()
-        removed = []
-        basic_lens = len(basic_layer['nodes'])
-        for e in basic_layer['edges']:
-            G.add_edge(e[0], e[1])
-        for e in second_layer['edges']:
-            G.add_edge(e[0] + basic_lens, e[1] + basic_lens)
-        for e in transfer_layer:
-            G.add_edge(e[0], e[1] + basic_lens)
+    """
+    该函数用于计算在多层网络中，移除某些节点后，最大连通子图中的节点变化情况。
 
-        largest_graph = nx.connected_components(G)
-        nodes = []
-        for n in second_layer['nodes']:
-            nodes.append(n + basic_lens)
-        id_list = []
-        for c in largest_graph:
-            for n in c:
-                if n in nodes:
-                    id_list.append(1)
-                else:
-                    id_list.append(0)
-        for idx, c in largest_graph:
-            for n in c:
-                if id_list[idx] == 0:
-                    if n in basic_layer['nodes']:
-                        removed.append(basic_layer['nodes_name'][n])
-        return removed
+    参数:
+    - basic_layer: 包含基础层节点和边的字典，键为 'nodes' 和 'edges'。
+    - second_layer: 包含第二层节点和边的字典，键为 'nodes' 和 'edges'。
+    - transfer_layer: 包含两层之间转移边的列表。
+
+    返回值:
+    - removed: 列表，包含在最大连通子图中被移除的基础层节点名称。
+    """
+    G = nx.Graph()
+    removed = []
+    basic_lens = len(basic_layer['nodes'])
+
+    # 将基础层和第二层的边添加到图中，并处理节点编号以避免冲突
+    for e in basic_layer['edges']:
+        G.add_edge(e[0], e[1])
+    for e in second_layer['edges']:
+        G.add_edge(e[0] + basic_lens, e[1] + basic_lens)
+    for e in transfer_layer:
+        G.add_edge(e[0], e[1] + basic_lens)
+
+    # 获取图中的最大连通子图
+    largest_graph = nx.connected_components(G)
+    nodes = [n + basic_lens for n in second_layer['nodes']]
+    id_list = []
+
+    # 标记每个连通子图中的节点是否属于第二层
+    for c in largest_graph:
+        for n in c:
+            if n in nodes:
+                id_list.append(1)
+            else:
+                id_list.append(0)
+
+    # 根据标记结果，确定哪些基础层节点被移除
+    for idx, c in enumerate(largest_graph):
+        for n in c:
+            if id_list[idx] == 0 and n in basic_layer['nodes']:
+                removed.append(basic_layer['nodes_name'][n])
+
+    return removed
+
 
 
 if __name__ == "__main__":
