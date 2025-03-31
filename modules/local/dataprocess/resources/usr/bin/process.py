@@ -1,257 +1,80 @@
 #!/usr/bin/env python
 
 import argparse
-import numpy as np
-import networkx as nx
-from copy import deepcopy
-
-# import random
-# import csv
 import json
 import pandas as pd
+import numpy as np
+from graph_utils import GraphUtils
+from layer_utils import LayerUtils
 
+class Process:
+    def __init__(self, args):
+        self.args = args
 
-def trans_dicts2graph(graph_dicts: dict) -> nx.Graph:
-    """
-    将字典形式的图数据转换为NetworkX图对象。
+    def run(self):
+        all_list_gene = pd.read_csv(self.args.path1).iloc[:, 0].to_list()
+        global_graph = json.load(open(self.args.json, "r"))
+        Gs = GraphUtils.trans_dicts2graph(graph_dicts=global_graph)
 
-    参数:
-    graph_dicts (dict): 字典形式的图数据，其中键表示节点，值表示与该节点相连的节点列表。
+        focus_genes_list = self._load_focus_genes()
+        drug_dicts = self._load_drug_dicts(all_list_gene)
+        json.dump(drug_dicts, open(f"{self.args.out}_drug.json", "w"))
 
-    返回值:
-    G (nx.Graph): 转换后的NetworkX图对象，包含所有节点和边。
-    """
-    # 创建一个空的NetworkX图对象
-    G = nx.Graph()
+        first_layer_gene = drug_dicts[self.args.drug1] + drug_dicts[self.args.drug2]
+        first_layer_gene.sort()
 
-    # 遍历字典中的每个节点及其相连节点列表
-    for key in graph_dicts.keys():
-        for k in graph_dicts[key]:
-            # 将节点对作为边添加到图中
-            G.add_edges_from([(key, k)])
+        removed_s, removed_t, transfer_layer = LayerUtils.trans_layer(
+            Gs, first_layer_gene, focus_genes_list
+        )
 
-    # 返回构建好的图对象
-    return G
+        second_layer_graph = GraphUtils.select_subgraph(global_graph, focus_genes_list)
+        drug_list = self._filter_drug_list(drug_dicts, removed_s, global_graph)
 
+        basic_layer_graph = GraphUtils.select_subgraph(global_graph, drug_list)
+        removed = LayerUtils.max_connect(basic_layer_graph, second_layer_graph, transfer_layer)
 
-def shortest_path(G: nx.Graph, source: str, target: str) -> float:
-    """
-    计算图中从源节点到目标节点的最短路径长度。
+        self._save_results(basic_layer_graph, second_layer_graph, transfer_layer, removed)
 
-    参数:
-    G (networkx.Graph): 输入的图对象，表示需要计算最短路径的图。
-    source (node): 源节点，表示路径的起点。
-    target (node): 目标节点，表示路径的终点。
+    def _load_focus_genes(self):
+        focus_genes_list = []
+        with open(self.args.path2) as f:
+            for index, line in enumerate(f.readlines()):
+                if index == 0:
+                    continue
+                focus_genes_list.append(line.replace('"', "").split()[0])
+        return focus_genes_list
 
-    返回值:
-    int or float: 如果存在从源节点到目标节点的路径，则返回最短路径的长度；
-                  如果不存在路径，则返回无穷大（float('inf')）。
-    """
-    try:
-        # 使用networkx库的shortest_path_length函数计算最短路径长度
-        num = nx.shortest_path_length(G, source, target)
-    except:
-        # 如果计算过程中发生异常（例如节点之间不存在路径），返回无穷大
-        return float("inf")
-    return num
+    def _load_drug_dicts(self, all_list_gene):
+        drug_dicts = {}
+        with open(self.args.path) as f:
+            for index, line in enumerate(f.readlines()):
+                if index == 0:
+                    continue
+                line = line.replace('"', "").split(",")
+                drug_dicts[line[0]] = list(
+                    set([m for m in line[1].strip().split() if m in all_list_gene])
+                )
+        return drug_dicts
 
+    def _filter_drug_list(self, drug_dicts, removed_s, global_graph):
+        drug_list = drug_dicts[self.args.drug1] + drug_dicts[self.args.drug2]
+        drug_list.sort()
+        degree_list = GraphUtils.count_degree(global_graph, drug_list)
+        return [d for idx, d in enumerate(drug_list) if not (d in removed_s and degree_list[idx] == 0)]
 
-def trans_layer(
-    Gs: nx.Graph, source_list: list, target_list: list, thres: int = 2
-) -> tuple:
-    """
-    该函数用于在给定的图中，根据源节点列表和目标节点列表，计算它们之间的最短路径，并根据阈值筛选出符合条件的节点对。
+    def _save_results(self, basic_layer_graph, second_layer_graph, transfer_layer, removed):
+        transfer_layer = np.array(transfer_layer).T
+        basic_layer_adj = np.array(basic_layer_graph['edges']).T
+        second_layer_adj = np.array(second_layer_graph['edges']).T
 
-    参数:
-    - Gs: 图对象，表示包含节点和边的图结构。
-    - source_list: 列表，包含源节点的标识符。
-    - target_list: 列表，包含目标节点的标识符。
-    - thres: 整数，表示最短路径的阈值，默认为2。
-
-    返回值:
-    - removed_source: 列表，包含被移除的源节点，这些节点与所有目标节点的最短路径都大于阈值。
-    - removed_target: 列表，包含被移除的目标节点，这些节点与所有源节点的最短路径都大于阈值。
-    - affin_graph: 二维数组，表示符合条件的源节点和目标节点的索引对。
-    """
-    affin_graph = []
-    removed_target = deepcopy(target_list)
-    removed_source = []
-
-    # 遍历源节点列表，计算每个源节点与所有目标节点的最短路径
-    for idx_s, g_s in enumerate(source_list):
-        marks_gene = {}
-        min_num = float("inf")
-
-        # 遍历目标节点列表，计算最短路径并记录相关信息
-        for idx, g_t in enumerate(target_list):
-            num = shortest_path(Gs, g_s, g_t)
-            if num not in marks_gene:
-                marks_gene[num] = []
-            marks_gene[num].append(idx)
-
-            # 如果最短路径大于阈值，则从removed_target中移除该目标节点
-            if num > thres:
-                if g_t in removed_target:
-                    removed_target.remove(g_t)
-
-            # 更新当前源节点与所有目标节点的最短路径的最小值
-            if num < min_num:
-                min_num = num
-
-        # 如果当前源节点与所有目标节点的最短路径都大于阈值，则将其添加到removed_source中
-        if min_num > thres:
-            removed_source.append(g_s)
-            continue
-
-        # 将符合条件（最短路径小于等于阈值）的源节点和目标节点的索引对添加到affin_graph中
-        for key in marks_gene.keys():
-            if key <= thres:
-                for g in marks_gene[key]:
-                    affin_graph.append([idx_s, g])
-
-    return removed_source, removed_target, np.array(affin_graph)
-
-
-def select_subgraph(graph_dicts: dict, gene_list: list) -> dict:
-    """
-    从给定的图字典中提取与基因列表相关的子图。
-
-    参数:
-    graph_dicts (dict): 表示图的字典，键为基因名称，值为与该基因相连的其他基因列表。
-    gene_list (list): 包含需要提取的基因名称的列表。
-
-    返回值:
-    dict: 返回一个包含子图信息的字典，包含以下键：
-        - 'nodes': 子图中节点的索引列表。
-        - 'nodes_name': 子图中节点的名称列表。
-        - 'edges': 子图中边的列表，每条边由两个节点的索引表示。
-    """
-    # 去重并排序基因列表
-    gene_list = list(set(gene_list))
-    gene_list.sort()
-
-    # 初始化返回的子图字典
-    return_graph_dicts = {}
-    return_graph_dicts["nodes"] = []
-    return_graph_dicts["nodes_name"] = []
-    return_graph_dicts["edges"] = []
-
-    # 遍历基因列表，构建子图的节点和边
-    for idx, g in enumerate(gene_list):
-        return_graph_dicts["nodes"].append(idx)
-        return_graph_dicts["nodes_name"].append(g)
-
-        # 如果当前基因在图字典中，则添加与之相连的边
-        if g in graph_dicts:
-            for end_nodes in graph_dicts[g]:
-                if (
-                    end_nodes in gene_list
-                    and [idx, gene_list.index(end_nodes)]
-                    not in return_graph_dicts["edges"]
-                ):
-                    return_graph_dicts["edges"].append(
-                        [idx, gene_list.index(end_nodes)]
-                    )
-
-        # 添加自环边
-        return_graph_dicts["edges"].append([idx, idx])
-
-    return return_graph_dicts
-
-
-def count_degree(graph_dicts:dict, gene_list:list) -> list:
-    """
-    计算基因列表中每个基因的度（degree），并返回一个包含度的列表。
-
-    参数:
-    graph_dicts (dict): 一个字典，表示图的邻接表。键是基因，值是与该基因相连的基因列表。
-    gene_list (list): 一个基因列表，表示需要计算度的基因。
-
-    返回值:
-    list: 一个包含每个基因度的列表，顺序与gene_list中的基因顺序一致。
-    """
-    degree_list = []  # 用于存储每个基因的度
-    return_graph_dicts = {}  # 用于存储返回的图信息
-    return_graph_dicts["edges"] = []  # 初始化边的列表
-
-    # 遍历基因列表，计算每个基因的度
-    for idx, g in enumerate(gene_list):
-        degree_list.append(0)  # 初始化当前基因的度为0
-        if g in graph_dicts:  # 如果当前基因在图的邻接表中
-            # 遍历与当前基因相连的所有基因
-            for end_nodes in graph_dicts[g]:
-                # 如果相连的基因在gene_list中，并且这条边还没有被记录
-                if (
-                    end_nodes in gene_list
-                    and [idx, gene_list.index(end_nodes)]
-                    not in return_graph_dicts["edges"]
-                ):
-                    # 记录这条边，并增加当前基因的度
-                    return_graph_dicts["edges"].append(
-                        [idx, gene_list.index(end_nodes)]
-                    )
-                    degree_list[idx] += 1
-
-    return degree_list  # 返回包含每个基因度的列表
-
-
-def max_connect(basic_layer,second_layer,transfer_layer):
-    """
-    该函数用于计算在多层网络中，移除某些节点后，最大连通子图中的节点变化情况。
-
-    参数:
-    - basic_layer: 包含基础层节点和边的字典，键为 'nodes' 和 'edges'。
-    - second_layer: 包含第二层节点和边的字典，键为 'nodes' 和 'edges'。
-    - transfer_layer: 包含两层之间转移边的列表。
-
-    返回值:
-    - removed: 列表，包含在最大连通子图中被移除的基础层节点名称。
-    """
-    G = nx.Graph()
-    removed = []
-    basic_lens = len(basic_layer['nodes'])
-
-    # 将基础层和第二层的边添加到图中，并处理节点编号以避免冲突
-    for e in basic_layer['edges']:
-        G.add_edge(e[0], e[1])
-    for e in second_layer['edges']:
-        G.add_edge(e[0] + basic_lens, e[1] + basic_lens)
-    for e in transfer_layer:
-        G.add_edge(e[0], e[1] + basic_lens)
-
-    # 获取图中的最大连通子图
-    largest_graph = nx.connected_components(G)
-    nodes = [n + basic_lens for n in second_layer['nodes']]
-    id_list = []
-
-    # 标记每个连通子图中的节点是否属于第二层
-    for c in largest_graph:
-        for n in c:
-            if n in nodes:
-                id_list.append(1)
-            else:
-                id_list.append(0)
-
-    # 根据标记结果，确定哪些基础层节点被移除
-    for idx, c in enumerate(largest_graph):
-        for n in c:
-            if id_list[idx] == 0 and n in basic_layer['nodes']:
-                removed.append(basic_layer['nodes_name'][n])
-
-    return removed
-
-
+        np.savez(f"{self.args.out}_transfer.npz", trans_layer=transfer_layer,
+                 basic_layer_adj=basic_layer_adj, second_layer_adj=second_layer_adj)
+        json.dump(basic_layer_graph, open(f"{self.args.out}_basic.json", "w"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--path",
-        type=str,
-        default="data/gene/merged_common_names.csv",
-    )
-    parser.add_argument(
-        "--path1", type=str, default="data/gene/Combined_Datasets_Matrix.csv"
-    )
+    parser.add_argument("--path", type=str, default="data/gene/merged_common_names.csv")
+    parser.add_argument("--path1", type=str, default="data/gene/Combined_Datasets_Matrix.csv")
     parser.add_argument("--path2", type=str, default="data/gene/ML_gene.csv")
     parser.add_argument("--json", type=str, default="res.json")
     parser.add_argument("--drug1", type=str, default="mitoxantrone")
@@ -259,68 +82,8 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=str, default="output")
     args = parser.parse_args()
 
-    all_list_gene = pd.read_csv(args.path1).iloc[:, 0].to_list()
-    global_graph = json.load(open(args.json, "r"))
-    Gs = trans_dicts2graph(graph_dicts=global_graph)
-
-    focus_genes_list = []
-    with open(args.path2) as f:
-        for index, line in enumerate(f.readlines()):
-            if index == 0:
-                continue
-            focus_genes_list.append(line.replace('"', "").split()[0])
-
-    drug_dicts = {}
-    with open(args.path) as f:
-        for index, line in enumerate(f.readlines()):
-            if index == 0:
-                continue
-            line = line.replace('"', "").split(",")
-            drug_dicts[line[0]] = list(
-                set([m for m in line[1].strip().split() if m in all_list_gene])
-            )
-    json.dump(drug_dicts, open(f"{args.out}_drug.json", "w"))
-
-    first_layer_gene = drug_dicts[args.drug1] + drug_dicts[args.drug2]
-    first_layer_gene.sort()
-
-    removed_s, removed_t, transfer_layer = trans_layer(
-        Gs, first_layer_gene, focus_genes_list
-    )
-
-    second_layer_graph = select_subgraph(global_graph, focus_genes_list)
-
-    drug_list = drug_dicts[args.drug1] + drug_dicts[args.drug2]
-    drug_list.sort()
-
-    degree_list = count_degree(global_graph, drug_list)
-
-    drug_list = [d for idx, d in enumerate(drug_list) if not (d in removed_s and degree_list[idx]==0)]
-
-    basic_layer_graph = select_subgraph(global_graph, drug_list)
-
-    first_layer_gene = basic_layer_graph['nodes_name']
-
-    removed = max_connect(basic_layer_graph, second_layer_graph, transfer_layer)
-
-    removed_s, removed_t, transfer_layer = trans_layer(Gs, first_layer_gene, focus_genes_list)
-
-    removed_all = removed_s + removed
-
-    drug_list = [d for idx, d in enumerate(drug_list) if not d in removed_all]
-
-    basic_layer_graph = select_subgraph(global_graph, drug_list)
-
-    first_layer_gene = basic_layer_graph['nodes_name']
-    removed_s, removed_t, transfer_layer = trans_layer(Gs, first_layer_gene, focus_genes_list)
-
-    transfer_layer = np.array(transfer_layer).T
-    basic_layer_adj = np.array(basic_layer_graph['edges']).T
-    second_layer_adj = np.array(second_layer_graph['edges']).T
-
-    np.savez(f"{args.out}_transfer.npz", trans_layer=transfer_layer,
-             basic_layer_adj=basic_layer_adj, second_layer_adj=second_layer_adj)
-    json.dump(basic_layer_graph, open(f"{args.out}_basic.json", "w"))
+    process = Process(args)
+    process.run()
 
 
 
