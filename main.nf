@@ -10,6 +10,7 @@
 //include { MOLFLOW  } from './workflows/molflow'
 include { RUNDATA    } from './workflows/flow'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_molflow_pipeline'
+include { MURUNDATA } from './workflows/muflow.nf'
 // include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 // include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 
@@ -71,7 +72,11 @@ workflow {
 
     println(PIPELINE_INITIALISATION.out.samplesheet.view())
 
-    RUNDATA (
+    // RUNDATA (
+    //     PIPELINE_INITIALISATION.out.samplesheet
+    // )
+
+    MURUNDATA (
         PIPELINE_INITIALISATION.out.samplesheet
     )
 
