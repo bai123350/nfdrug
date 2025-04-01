@@ -83,6 +83,7 @@ class AllData(object):
         y_data = np.concatenate((y_data_label, y_data_time), axis=0).T
         return x_data, y_data_label, y_data
 
+
 class Utils(object):
     @staticmethod
     def normalize_data(X, y):
@@ -108,47 +109,28 @@ class Utils(object):
 #                         transfer_layer, ori_gene2).to(device)
 #     return model
 
-def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer, device):
-    # 添加维度检查和打印
-    print(f"Input dimensions:")
-    print(f"gene_num: {gene_num}, gene_num2: {gene_num2}")
-    print(f"gene_adj shape: {gene_adj.shape}")
-    print(f"gene_adj2 shape: {gene_adj2.shape}")
-    print(f"transfer_layer shape: {transfer_layer.shape}")
 
-    # 检查索引是否有效
-    print(f"gene_adj max index: {gene_adj.max()}")
-    print(f"gene_adj2 max index: {gene_adj2.max()}")
+def build_bfregNN_model(
+    gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer, device
+):
+    v1 = torch.ones(gene_adj.shape[1], device=device)
+    ori_gene = torch.sparse_coo_tensor(gene_adj, v1, size=(gene_num, gene_num))
+    print(f"ori_gene shape: {ori_gene.size()}")
 
-    # 检查维度是否匹配
-    if gene_adj.max() >= gene_num:
-        raise ValueError(f"gene_adj indices exceed gene_num: {gene_adj.max()} >= {gene_num}")
-    if gene_adj2.max() >= gene_num2:
-        raise ValueError(f"gene_adj2 indices exceed gene_num2: {gene_adj2.max()} >= {gene_num2}")
+    v2 = torch.ones(gene_adj2.shape[1], device=device)
+    ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))
+    ori_gene2 = ori_gene2.to_dense()
 
-    # 构建稀疏张量
-    try:
-        v1 = torch.ones(gene_adj.shape[1], device=device)
-        ori_gene = torch.sparse_coo_tensor(gene_adj, v1, size=(gene_num, gene_num))
-        print(f"ori_gene shape: {ori_gene.size()}")
+    v3 = torch.ones(transfer_layer.shape[1], device=device)
+    transfer_matrix = torch.sparse_coo_tensor(
+        transfer_layer, v3, size=(gene_num, gene_num2)
+    )
+    transfer_dense = transfer_matrix.to_dense()
 
-        v2 = torch.ones(gene_adj2.shape[1], device=device)
-        ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))
-        ori_gene2 = ori_gene2.to_dense()
-        print(f"ori_gene2 shape: {ori_gene2.size()}")
-        print("ori_gene2 dense shape:", ori_gene2.to_dense().shape)
-
-        v3 = torch.ones(transfer_layer.shape[1], device=device)
-        transfer_matrix = torch.sparse_coo_tensor(transfer_layer, v3, size=(gene_num, gene_num2))
-        transfer_dense = transfer_matrix.to_dense()
-        print(f"transfer_layer dense shape: {transfer_dense.shape}")
-
-        model = BFRegNN_COX(gene_num, gene_num2, 64, ori_gene, transfer_dense, ori_gene2).to(device)
-        return model
-
-    except Exception as e:
-        print(f"Error in build_bfregNN_model: {str(e)}")
-        raise
+    model = BFRegNN_COX(
+        gene_num, gene_num2, 64, ori_gene, transfer_dense, ori_gene2
+    ).to(device)
+    return model
 
 
 def count_gene():
@@ -160,28 +142,53 @@ def count_gene():
             focus_genes_list.append(line.replace('"', "").split()[0])
     return len(focus_genes_list)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path1", type=str, default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Matrix.csv")
-    parser.add_argument("--path2", type=str, default="/home/bio-17/projects/drug/nf_drug/nfdrug/results/dataprocess/sample1_process_basic.json")
-    parser.add_argument("--gene", type=str, default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/ML_gene.csv")
-    parser.add_argument("--group", type=str, default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Group.csv")
+    parser.add_argument(
+        "--path1",
+        type=str,
+        default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Matrix.csv",
+    )
+    parser.add_argument(
+        "--path2",
+        type=str,
+        default="/home/bio-17/projects/drug/nf_drug/nfdrug/results/dataprocess/sample1_process_basic.json",
+    )
+    parser.add_argument(
+        "--gene",
+        type=str,
+        default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/ML_gene.csv",
+    )
+    parser.add_argument(
+        "--group",
+        type=str,
+        default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Group.csv",
+    )
     parser.add_argument("--disea", type=str, default="DKD")
     parser.add_argument("--batch", type=int, default=10)
-    parser.add_argument('--out', type=str, default='xy')
-    parser.add_argument("--npz", type=str, default="/home/bio-17/projects/drug/nf_drug/nfdrug/results/dataprocess/sample1_process_transfer.npz")
+    parser.add_argument("--out", type=str, default="xy")
+    parser.add_argument(
+        "--npz",
+        type=str,
+        default="/home/bio-17/projects/drug/nf_drug/nfdrug/results/dataprocess/sample1_process_transfer.npz",
+    )
     args = parser.parse_args()
     X_all, x_sample_id_list = DataSET().process_x()
     y_tumor, y_survival = GroupSet().groupsplit()
 
-    x_data, y_data_label, y_data = AllData().pall_data(x_sample_id_list, X_all,y_survival)
-    # np.savez(f"{args.out}_all.npz", x_data = x_data, y_data_label = y_data_label, y_data = y_data)
+    x_data, y_data_label, y_data = AllData().pall_data(
+        x_sample_id_list, X_all, y_survival
+    )
+    np.savez(
+        f"{args.out}_all.npz", x_data=x_data, y_data_label=y_data_label, y_data=y_data
+    )
 
     X, y = Utils().normalize_data(x_data, y_data)
 
     train_data_dataset = GeneDataset(X, y)
     train_data = DataLoader(train_data_dataset, batch_size=args.batch)
-    # torch.save(train_data, f"{args.out}_train_data.pt")
+    torch.save(train_data, f"{args.out}_train_data.pt")
 
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
@@ -190,15 +197,12 @@ if __name__ == "__main__":
     # print(npz["second_layer_adj"])
     # print(npz["trans_layer"])
 
-
-    model = build_bfregNN_model(X.shape[1], count_gene(),
-            npz["basic_layer_adj"], npz["second_layer_adj"], npz["trans_layer"],
-            device)
-    # torch.save(model, f"{args.out}_model.pt")
-
-
-
-
-
-
-
+    model = build_bfregNN_model(
+        X.shape[1],
+        count_gene(),
+        npz["basic_layer_adj"],
+        npz["second_layer_adj"],
+        npz["trans_layer"],
+        device,
+    )
+    torch.save(model, f"{args.out}_model.pt")

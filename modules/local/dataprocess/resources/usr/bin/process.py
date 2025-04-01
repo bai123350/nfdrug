@@ -31,8 +31,15 @@ class Process:
         drug_list = self._filter_drug_list(drug_dicts, removed_s, global_graph)
 
         basic_layer_graph = GraphUtils.select_subgraph(global_graph, drug_list)
-        removed = LayerUtils.max_connect(basic_layer_graph, second_layer_graph, transfer_layer)
-
+        first_layer_gene = basic_layer_graph['nodes_name']
+        removed =  LayerUtils.max_connect(basic_layer_graph, second_layer_graph, transfer_layer)
+        removed_s, removed_t, transfer_layer = LayerUtils.trans_layer(Gs, first_layer_gene, focus_genes_list)
+        removed_all = removed_s + removed
+        drug_list = [d for idx, d in enumerate(drug_list) if not d in removed_all]
+        # removed = LayerUtils.max_connect(basic_layer_graph, second_layer_graph, transfer_layer)
+        basic_layer_graph = GraphUtils.select_subgraph(global_graph, drug_list)
+        first_layer_gene = basic_layer_graph['nodes_name']
+        removed_s, removed_t, transfer_layer = LayerUtils.trans_layer(Gs, first_layer_gene, focus_genes_list)
         self._save_results(basic_layer_graph, second_layer_graph, transfer_layer, removed)
 
     def _load_focus_genes(self):

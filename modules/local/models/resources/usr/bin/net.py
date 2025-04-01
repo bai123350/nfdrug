@@ -134,27 +134,13 @@ class cox_affine(nn.Module):
 class BFRegNN(nn.Module):
     def __init__(self, in_dim, in_dim2, n_hid, basic_layer, transfer_layer, second_layer):
         super().__init__()
-
-        print(f"\nBFRegNN initialization:")
-        print(f"in_dim: {in_dim}, in_dim2: {in_dim2}")
-        print(f"basic_layer shape: {basic_layer.shape}")
-        print(f"transfer_layer shape: {transfer_layer.shape}")
-        print(f"second_layer shape: {second_layer.shape}")
-
         try:
             self.graph1 = basic_layer.to_dense() if basic_layer.is_sparse else basic_layer
-            print(f"graph1 shape: {self.graph1.shape}")
-
             self.basic_graph = IntraLayer(in_dim, 1, 4, 4, "cat", "GCN")
 
             self.transfer_graph = transfer_layer
-            print(f"transfer_graph shape: {self.transfer_graph.shape}")
-
             self.inter_layer = InterLayer(in_dim, in_dim2)
-
-            print("Converting second_layer to dense...")
             self.graph2 = second_layer.to_dense() if second_layer.is_sparse else second_layer
-            print(f"graph2 shape: {self.graph2.shape}")
 
             self.second_graph = IntraLayer(in_dim2, 4, 4, 4, "cat", "GCN")
             self.cox_aff = cox_affine(in_dim2)
@@ -186,7 +172,6 @@ class BuildModel(object):
 
         v2 = torch.ones(gene_adj2.shape[1], device=device)
         ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))
-        print("ori gene2",ori_gene2)
 
         v3 = torch.ones(transfer_layer.shape[1], device=device)
         transfer_layer = torch.sparse_coo_tensor(transfer_layer, v3, size=(gene_num,gene_num2)).to_dense()
