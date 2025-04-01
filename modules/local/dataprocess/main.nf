@@ -1,4 +1,4 @@
-process DATAPROCESS {
+process  DATAPROCESS {
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
@@ -27,9 +27,7 @@ process DATAPROCESS {
     def prefix = task.ext.prefix ?: "${meta.id}_process"
 
     """
-    process.py --path ${reads[2]}  --path1 ${reads[3]} --path2 ${reads[5]} \
-    --json ${json} --drug1 ${params.drug1} --drug2 ${params.drug2} \
-    --out  ${prefix}
+    process.py --path ${reads[2]}  --path1 ${reads[3]} --path2 ${reads[5]} --json ${json} --drug1 ${params.drug1} --drug2 ${params.drug2} --out  ${prefix}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

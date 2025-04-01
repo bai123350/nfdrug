@@ -1,0 +1,47 @@
+nextflow_process {
+
+    name "Test Process MODELS"
+    script "../main.nf"
+    process "MODELS"
+
+    tag "modules"
+    tag "modules_local"
+    tag "models"
+
+    test("Model generation test") {
+
+        when {
+            params {
+                outdir = "tests/results"
+                disea = "DKD"
+            }
+            process {
+                """
+                input[0] = [
+                    [ id:'test1', single_end:false ],
+                    [
+                        "test1.txt",
+                        "test2.txt",
+                        "test3.txt",
+                        "${projectDir}/data/gene/Combined_Datasets_Matrix.csv",
+                        "${projectDir}/data/gene/Combined_Datasets_Group.csv",
+                        "${projectDir}/data/gene/ML_gene.csv"
+                    ]
+                ]
+                input[1] = ["${projectDir}/results/dataprocess/test1_process_basic.json"]
+                input[2] = file("${projectDir}/results/dataprocess/test1_process_transfer.npz")
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path("${params.outdir}/models/test1_xy_train_data.pt").exists() },
+                { assert path("${params.outdir}/models/test1_xy_model.pt").exists() },
+                { assert path("${params.outdir}/models/test1_xy_all.npz").exists() },
+                { assert path("${params.outdir}/models/versions.yml").exists() }
+            )
+        }
+    }
+}
