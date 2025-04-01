@@ -7,35 +7,58 @@ nextflow_process {
     // 测试标签，用于分类和过滤测试
     tag "modules"                         // 表示这是模块测试
     tag "modules_nfcore"                  // 表示这是nf-core模块
-    tag "dataprocess"                   // 表示这是数据处理模块
+    tag "dataprocess"                     // 表示这是数据处理模块
 
     test("DATAPROCESS test") {
+        setup {
+            // 运行 DATAFETCH 进程并获取输出
+            def datafetch = process {
+                """
+                input[0] = [
+                    [ id:'sample1', single_end:false ],
+                    ["${projectDir}/data/9606.protein.info.v11.5.txt", "${projectDir}/data/9606.protein.links.full.v11.5.txt"]
+                ]
+                """
+            }
+            return datafetch
+        }
 
         when {
             params {
-                // define parameters here. Example:
-                outdir = "tests/results"
+                outdir = "tests/results"  // 设置输出目录
+                drug1 = "Quercetin"          // 设置参数 drug1
+                drug2 = "Troglitazone"         // 设置参数 drug2
             }
             process {
                 """
-                // define inputs of the process here. Example:
+                // 定义输入数据
                 input[0] = [
                     [ id:'sample1', single_end:false ],  // 元数据映射
-                    ["${projectDir}/data/9606.protein.info.v11.5.txt" , // 输入文件路径
-                    "${projectDir}/data/9606.protein.links.full.v11.5.txt"]  // 输入文件路径
+                    [
+                        "${projectDir}/data/9606.protein.info.v11.5.txt",  // 输入文件路径 1
+                        "${projectDir}/data/9606.protein.links.full.v11.5.txt",  // 输入文件路径 2
+                        "${projectDir}/data/gene/merged_common_names.csv",  // 输入文件路径 3
+                        "${projectDir}/data/gene/Combined_Datasets_Matrix.csv",
+                        "${projectDir}/data/gene/Combined_Datasets_Group.csv",
+                        "${projectDir}/data/gene/ML_gene.csv",
+                    ]
                 ]
+                input[1] = "${projectDir}/results/datafetch/res.json"  // 使用上一步的输出
                 """
             }
         }
 
         then {
+            def meta_expected = [id: 'sample1', single_end: false]
+
             assertAll(
-                { assert process.success },                    // 验证进程是否成功完成
-                { assert snapshot(process.out).match() }      // 验证输出是否与快照匹配
-                //{ assert path("${process.out.structure[0][1]}").exists() }  // 验证是否创建了占位输出文件      // 验证是否创建了版本文件
+                { assert process.success },
+                { assert process.out.meta_id[0] == meta_expected },
+                { assert process.out.json[0].any { it.toString().contains("_process_basic.json") } },
+                { assert process.out.json[0].any { it.toString().contains("_process_drug.json") } },
+                { assert process.out.npz[0].toString().contains("_process_transfer.npz") },
+                { assert path(process.out.versions[0]).exists() }
             )
         }
-
     }
-
 }
