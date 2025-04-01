@@ -70,7 +70,6 @@ workflow {
     )
 
 
-    println(PIPELINE_INITIALISATION.out.samplesheet.view())
 
     // RUNDATA (
     //     PIPELINE_INITIALISATION.out.samplesheet

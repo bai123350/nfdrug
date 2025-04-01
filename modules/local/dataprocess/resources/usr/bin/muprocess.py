@@ -127,7 +127,7 @@ def process_combinations_parallel(drug_combinations: List[Tuple[str, str]], args
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for drug1, drug2 in drug_combinations:
-            out = f"{drug1.replace(' ','')}_{drug2.replace(' ','')}"
+            out = f"./drug/{drug1.replace(' ','')}_{drug2.replace(' ','')}"
 
             future = executor.submit(
                 MuProcess.process_drug_combination,
@@ -164,3 +164,4 @@ if __name__ == "__main__":
 
     # 使用多线程处理药物组合
     process_combinations_parallel(drug_combinations, args, max_workers=args.threads)
+

@@ -26,11 +26,8 @@ process  MUTILDATAPROCESS {
     def prefix = task.ext.prefix ?: "${meta.id}_process"
 
     """
-    mkdir -p drug
-    cd drug
     muprocess.py --path ${reads[2]}  --path1 ${reads[3]} --path2 ${reads[5]} --json ${json}
 
-    cd ..
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         networkx:  \$(python -c 'import networkx; print(networkx.__version__)')
