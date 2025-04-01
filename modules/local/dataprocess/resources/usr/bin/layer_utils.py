@@ -77,3 +77,16 @@ class LayerUtils:
         except:
             return float("inf")
         return num
+
+
+class UtilsDrug:
+
+    def readdrug_dicts(self, path):
+        all_drug = []
+        with open(path) as f:
+            for index, line in enumerate(f.readlines()):
+                if index == 0:
+                    continue
+                line = line.replace('"', "").split(",")
+                all_drug.append(line[0])
+        return all_drug

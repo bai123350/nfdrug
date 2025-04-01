@@ -1,3 +1,4 @@
+
 process MODELS {
     label 'process_medium'
 
@@ -8,12 +9,11 @@ process MODELS {
     input:
     tuple val(meta), val(reads)
     val(json1)
-    path(npz , stageAs : "res.npz")
+    path(npz)
 
 
     output:
     tuple val(meta), emit: meta_id
-    path("*.pt"), emit: pt
     path("*.npz"), emit: npz
     path "versions.yml", emit: versions
 
@@ -23,11 +23,12 @@ process MODELS {
     script:
     def prefix = task.ext.prefix ?: "${meta.id}_models"
     def xy = task.ext.xy ?: "${meta.id}_xy"
-    def js = json1.find { it.toString().contains('basic') }
-    def dis = task.ext.dis ?: "${params.disea}"
+    def js = json1.find { it.contains('basic') }
+    println (json1.collect { it.split('/').last() })
 
     """
-    model.py --path1 ${reads[3]}  --path2 ${js} --group ${reads[4]} --disea ${dis}  --out  ${xy} --npz ${npz} --gene ${reads[5]}
+
+    model.py --path1 ${reads[3]}  --path2 ${js} --group ${reads[4]} --disea ${params.disea}  --out  ${xy}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -36,9 +37,8 @@ process MODELS {
     """
 
     stub:
-    def prefix = task.ext.prefix ?: "${meta.id}_models"
     """
-    touch "${prefix}_models.npz"
+    touch "models.npz"
     touch "versions.yml"
     """
 

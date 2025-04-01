@@ -83,7 +83,6 @@ class AllData(object):
         y_data = np.concatenate((y_data_label, y_data_time), axis=0).T
         return x_data, y_data_label, y_data
 
-
 class Utils(object):
     @staticmethod
     def normalize_data(X, y):
@@ -92,46 +91,20 @@ class Utils(object):
         return X_transformed, y
 
 
-# def build_bfregNN_model(gene_num, gene_num2, gene_adj,
-#                         gene_adj2, transfer_layer, device):
+def build_bfregNN_model(gene_num, gene_num2, gene_adj,
+                        gene_adj2, transfer_layer, device):
 
-#     v1 = torch.ones(gene_adj.shape[1], device=device)
-#     ori_gene = torch.sparse_coo_tensor(gene_adj, v1, size=(gene_num, gene_num))
-
-#     v2 = torch.ones(gene_adj2.shape[1], device=device)
-#     ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))
-#     print("ori_gene2,",ori_gene2.to_dense())
-
-#     v3 = torch.ones(transfer_layer.shape[1], device=device)
-#     transfer_layer = torch.sparse_coo_tensor(transfer_layer, v3, size=(gene_num,gene_num2)).to_dense()
-
-#     model = BFRegNN_COX(gene_num, gene_num2, 64, ori_gene,
-#                         transfer_layer, ori_gene2).to(device)
-#     return model
-
-
-def build_bfregNN_model(
-    gene_num, gene_num2, gene_adj, gene_adj2, transfer_layer, device
-):
     v1 = torch.ones(gene_adj.shape[1], device=device)
     ori_gene = torch.sparse_coo_tensor(gene_adj, v1, size=(gene_num, gene_num))
-    print(f"ori_gene shape: {ori_gene.size()}")
 
     v2 = torch.ones(gene_adj2.shape[1], device=device)
     ori_gene2 = torch.sparse_coo_tensor(gene_adj2, v2, size=(gene_num2, gene_num2))
-    ori_gene2 = ori_gene2.to_dense()
 
     v3 = torch.ones(transfer_layer.shape[1], device=device)
-    transfer_matrix = torch.sparse_coo_tensor(
-        transfer_layer, v3, size=(gene_num, gene_num2)
-    )
-    transfer_dense = transfer_matrix.to_dense()
+    transfer_layer = torch.sparse_coo_tensor(transfer_layer, v3, size=(gene_num,gene_num2)).to_dense()
 
-    model = BFRegNN_COX(
-        gene_num, gene_num2, 64, ori_gene, transfer_dense, ori_gene2
-    ).to(device)
+    model = BFRegNN_COX(gene_num, gene_num2, 64, ori_gene, transfer_layer, ori_gene2).to(device)
     return model
-
 
 def count_gene():
     focus_genes_list = []
@@ -142,47 +115,22 @@ def count_gene():
             focus_genes_list.append(line.replace('"', "").split()[0])
     return len(focus_genes_list)
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--path1",
-        type=str,
-        default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Matrix.csv",
-    )
-    parser.add_argument(
-        "--path2",
-        type=str,
-        default="/home/bio-17/projects/drug/nf_drug/nfdrug/results/dataprocess/sample1_process_basic.json",
-    )
-    parser.add_argument(
-        "--gene",
-        type=str,
-        default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/ML_gene.csv",
-    )
-    parser.add_argument(
-        "--group",
-        type=str,
-        default="/home/bio-17/projects/drug/nf_drug/nfdrug/data/gene/Combined_Datasets_Group.csv",
-    )
+    parser.add_argument("--path1", type=str, default="mart_export.txt")
+    parser.add_argument("--path2", type=str, default="basic_layer_graph.json")
+    parser.add_argument("--gene", type=str, default="len(gene)")
+    parser.add_argument("--group", type=str, default="group.txt")
     parser.add_argument("--disea", type=str, default="DKD")
     parser.add_argument("--batch", type=int, default=10)
-    parser.add_argument("--out", type=str, default="xy")
-    parser.add_argument(
-        "--npz",
-        type=str,
-        default="/home/bio-17/projects/drug/nf_drug/nfdrug/results/dataprocess/sample1_process_transfer.npz",
-    )
+    parser.add_argument('--out', type=str, default='xy')
+    parser.add_argument("--npz", type=str, default="npz")
     args = parser.parse_args()
     X_all, x_sample_id_list = DataSET().process_x()
     y_tumor, y_survival = GroupSet().groupsplit()
 
-    x_data, y_data_label, y_data = AllData().pall_data(
-        x_sample_id_list, X_all, y_survival
-    )
-    np.savez(
-        f"{args.out}_all.npz", x_data=x_data, y_data_label=y_data_label, y_data=y_data
-    )
+    x_data, y_data_label, y_data = AllData().pall_data(x_sample_id_list, X_all,y_survival)
+    np.savez(f"{args.out}_all.npz", x_data = x_data, y_data_label = y_data_label, y_data = y_data)
 
     X, y = Utils().normalize_data(x_data, y_data)
 
@@ -190,19 +138,19 @@ if __name__ == "__main__":
     train_data = DataLoader(train_data_dataset, batch_size=args.batch)
     torch.save(train_data, f"{args.out}_train_data.pt")
 
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     npz = np.load(f"{args.npz}")
-    # print(npz["basic_layer_adj"])
-    # print(npz["second_layer_adj"])
-    # print(npz["trans_layer"])
 
-    model = build_bfregNN_model(
-        X.shape[1],
-        count_gene(),
-        npz["basic_layer_adj"],
-        npz["second_layer_adj"],
-        npz["trans_layer"],
-        device,
-    )
+
+    model = build_bfregNN_model(X.shape[1], count_gene(),
+            npz["basic_layer_adj"], npz["second_layer_adj"], npz["trans_layer"],
+            device)
     torch.save(model, f"{args.out}_model.pt")
+
+
+
+
+
+
+

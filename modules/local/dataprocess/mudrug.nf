@@ -16,8 +16,7 @@ process  MUTILDATAPROCESS {
 
     output:
     val(meta),  emit: meta_id
-    path("*.json"), emit: json
-    path("*.npz"), emit: npz
+    path("drug/*"), emit: all_folders
     path "versions.yml", emit: versions
 
     when:
@@ -27,8 +26,11 @@ process  MUTILDATAPROCESS {
     def prefix = task.ext.prefix ?: "${meta.id}_process"
 
     """
-    process.py --path ${reads[2]}  --path1 ${reads[3]} --path2 ${reads[5]} --json ${json} --drug1 ${params.drug1} --drug2 ${params.drug2} --out  ${prefix}
+    mkdir -p drug
+    cd drug
+    muprocess.py --path ${reads[2]}  --path1 ${reads[3]} --path2 ${reads[5]} --json ${json}
 
+    cd ..
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         networkx:  \$(python -c 'import networkx; print(networkx.__version__)')
