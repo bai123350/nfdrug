@@ -1,11 +1,11 @@
 process DATAPROCESS {
-
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
-    // container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-    //     'docker://kjd12/pyhtonbio:1.0' :
-    //     'kjd12/pyhtonbio:1.0' }"
+
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'docker://kjd12/pyhtonbio:1.0' :
+        'kjd12/pyhtonbio:1.0' }"
 
     publishDir "${params.outdir}/dataprocess", mode: 'copy'
 
@@ -33,7 +33,7 @@ process DATAPROCESS {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        networkx: \$(python -c "import networkx; print(networkx.__version__)")
+        networkx:  \$(python -c 'import networkx; print(networkx.__version__)')
     END_VERSIONS
     """
 
@@ -42,7 +42,7 @@ process DATAPROCESS {
     """
     touch "${prefix}_drug.json"
     touch "${prefix}_tranfer.npz"
-    touch "${prefix}_basic.npz"
+    touch "${prefix}_basic.json"
     touch "versions.yml"
     """
 }
