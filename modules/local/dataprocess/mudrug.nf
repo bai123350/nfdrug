@@ -37,6 +37,7 @@ process  MUTILDATAPROCESS {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}_process"
     """
+    mkdir -p drug
     touch "${prefix}_drug.json"
     touch "${prefix}_tranfer.npz"
     touch "${prefix}_basic.json"
