@@ -1,8 +1,8 @@
 include { DATATETCH   } from '../modules/local/datafetch/main'
 include { MUTILDATAPROCESS } from '../modules/local/dataprocess/mudrug'
 include { MUALLMODELS } from '../modules/local/models/mumodel'
-// include { MODELS      } from '../modules/local/models/main'
-// include { TRAIN       } from '../modules/local/train/main'
+include { MUTRAIN } from '../modules/local/train/mutrain'
+
 
 
 
@@ -31,11 +31,10 @@ workflow MURUNDATA {
         MUTILDATAPROCESS.out.all_folders
     )
 
-    // TRAIN(
-    //     samplesheet,
-    //     MODELS.out.pt,
-    //     DATAPROCESS.out.npz,
-    // )
+    MUTRAIN(
+        samplesheet,
+        MUALLMODELS.out.model_dirs,
+    )
 
     // emit:
     // json_report = DATATETCH.out.json // channel: /path/to/multiqc_report.html
