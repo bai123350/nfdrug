@@ -19,7 +19,6 @@ process MUALLMODELS {
 
     script:
     def prefix = task.ext.prefix ?: "${meta.id}_models"
-    def xy = task.ext.xy ?: "${meta.id}_xy"
     // def js = json1.find { it.toString().contains('basic') }
     def folders = all_folders instanceof List ? all_folders.join(',') : [all_folders].join(',')
 
