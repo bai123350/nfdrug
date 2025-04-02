@@ -102,35 +102,6 @@ class cox_affine(nn.Module):
 
 
 
-# class BFRegNN(nn.Module):
-#     def __init__(self, in_dim, in_dim2, n_hid, basic_layer, transfer_layer, second_layer):
-#         super().__init__()
-
-#         self.graph1 = basic_layer.to_dense()
-#         self.basic_graph = IntraLayer(in_dim, 1, 4, 4, "cat", "GCN")
-
-#         self.transfer_graph = transfer_layer.to_dense()
-#         self.inter_layer = InterLayer(in_dim, in_dim2)
-
-#         # print("second layer",second_layer)
-#         self.graph2 = second_layer.to_dense()
-#         self.second_graph = IntraLayer(in_dim2, 4, 4, 4, "cat", "GCN")
-
-#         self.cox_aff = cox_affine(in_dim2)
-
-
-#     def forward(self, x):
-#         x = x.unsqueeze(-1)
-#         print("x",x.shape)
-#         x = self.basic_graph(x, self.graph1)
-#         print("x2",x.shape)
-#         x = self.inter_layer(x, self.transfer_graph)
-#         print("x3",x.shape)
-#         x = self.second_graph(x, self.graph2)
-#         print("x4",x.shape)
-#         x = self.cox_aff(x)
-#         return x
-
 class BFRegNN(nn.Module):
     def __init__(self, in_dim, in_dim2, n_hid, basic_layer, transfer_layer, second_layer):
         super().__init__()

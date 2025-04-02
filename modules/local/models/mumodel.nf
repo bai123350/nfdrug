@@ -10,9 +10,8 @@ process MUALLMODELS {
     path(all_folders)
 
     output:
-    tuple val(meta), emit: meta_id
-    path("*.pt"), emit: pt
-    path("*.npz"), emit: npz
+    val(meta), emit: meta_id
+    path("models/*"), emit: model_dirs
     path "versions.yml", emit: versions
 
     when:
@@ -22,10 +21,10 @@ process MUALLMODELS {
     def prefix = task.ext.prefix ?: "${meta.id}_models"
     def xy = task.ext.xy ?: "${meta.id}_xy"
     // def js = json1.find { it.toString().contains('basic') }
-    def dis = task.ext.dis ?: "${params.disea}"
+    def folders = all_folders instanceof List ? all_folders.join(',') : [all_folders].join(',')
 
     """
-
+    mumodel.py --path ${reads[3]} --group ${reads[4]} --gene ${reads[5]} --folder ${folders}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

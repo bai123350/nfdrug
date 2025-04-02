@@ -1,5 +1,6 @@
 include { DATATETCH   } from '../modules/local/datafetch/main'
 include { MUTILDATAPROCESS } from '../modules/local/dataprocess/mudrug'
+include { MUALLMODELS } from '../modules/local/models/mumodel'
 // include { MODELS      } from '../modules/local/models/main'
 // include { TRAIN       } from '../modules/local/train/main'
 
@@ -25,11 +26,10 @@ workflow MURUNDATA {
         DATATETCH.out.json,
     )
 
-    // MODELS(
-    //     samplesheet,
-    //     DATAPROCESS.out.json,
-    //     DATAPROCESS.out.npz,
-    // )
+    MUALLMODELS(
+        samplesheet,
+        MUTILDATAPROCESS.out.all_folders
+    )
 
     // TRAIN(
     //     samplesheet,
