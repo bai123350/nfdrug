@@ -1,7 +1,7 @@
-include { DATATETCH   } from '../modules/local/datafetch/main'
+include { DATATETCH        } from '../modules/local/datafetch/main'
 include { MUTILDATAPROCESS } from '../modules/local/dataprocess/mudrug'
-include { MUALLMODELS } from '../modules/local/models/mumodel'
-include { MUTRAIN } from '../modules/local/train/mutrain'
+include { MUALLMODELS      } from '../modules/local/models/mumodel'
+include { MUTRAIN          } from '../modules/local/train/mutrain'
 
 
 
