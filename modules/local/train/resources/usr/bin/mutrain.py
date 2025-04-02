@@ -9,11 +9,8 @@ import random
 import matplotlib.pyplot as plt
 import os
 import logging
-from torch.nn.parallel import DistributedDataParallel as DDP
-import torch.multiprocessing as mp
-import torch.distributed as dist
-from torch.utils.data.distributed import DistributedSampler
-from functools import partial
+import gc
+import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -28,115 +25,79 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def setup(rank, world_size):
+def get_gpu_memory():
+    """获取GPU内存使用情况"""
+    if torch.cuda.is_available():
+        return torch.cuda.memory_allocated(0), torch.cuda.memory_reserved(0)
+    return 0, 0
+
+def is_gpu_memory_available(threshold=0.9):
+    """检查GPU内存是否有足够空间"""
+    if torch.cuda.is_available():
+        allocated = torch.cuda.memory_allocated(0)
+        total = torch.cuda.get_device_properties(0).total_memory
+        return allocated < threshold * total
+    return False
+
+def train_model(model, train_data, optimizer, epochs, device):
+    model = model.to(device)
+    cross = nn.CrossEntropyLoss()
+    losses = []
+    accuracies = []
+
     try:
-        os.environ['MASTER_ADDR'] = 'localhost'
-        os.environ['MASTER_PORT'] = '12355'
-        if torch.cuda.is_available():
-            torch.cuda.set_device(rank)
-        dist.init_process_group(
-            backend="nccl" if torch.cuda.is_available() else "gloo",
-            rank=rank,
-            world_size=world_size
-        )
-    except Exception as e:
-        logger.error(f"初始化分布式环境失败: {str(e)}")
-        raise
-
-def cleanup():
-    dist.destroy_process_group()
-
-def train_model_distributed(rank, world_size, folder_path, epochs, device):
-    try:
-        setup(rank, world_size)
-
-        # 在每个进程中加载模型和数据
-        model = torch.load(os.path.join(folder_path, 'model.pt'), map_location=f'cuda:{rank}' if torch.cuda.is_available() else 'cpu')
-        train_data = torch.load(os.path.join(folder_path, 'train_data.pt'), map_location=f'cuda:{rank}' if torch.cuda.is_available() else 'cpu')
-        optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
-
-        model = model.to(rank)
-        if torch.cuda.device_count() > 1:
-            model = DDP(model, device_ids=[rank])
-
-        train_sampler = DistributedSampler(train_data.dataset,
-                                         num_replicas=world_size,
-                                         rank=rank)
-        train_loader = torch.utils.data.DataLoader(
-            train_data.dataset,
-            batch_size=train_data.batch_size,
-            sampler=train_sampler,
-            num_workers=2,
-            pin_memory=True
-        )
-
-        # 修改损失函数
-        cross = nn.BCEWithLogitsLoss(reduction='mean')
-        losses = []
-        accuracies = []
-
         for e in range(epochs):
             model.train()
-            train_sampler.set_epoch(e)
             train_loss = 0
             total_correct = 0
             total_samples = 0
 
-            for d in train_loader:
+            for d in train_data:
+                # 检查GPU内存使用
+                allocated, reserved = get_gpu_memory()
+                if allocated > 0.9 * torch.cuda.get_device_properties(0).total_memory:
+                    logger.warning("GPU内存接近上限，等待释放...")
+                    torch.cuda.empty_cache()
+                    gc.collect()
+                    time.sleep(1)  # 等待内存释放
+
                 optimizer.zero_grad()
-                data = d[0].float().to(rank)
-                label = d[1].float().to(rank)
+                data = d[0].float().to(device)
+                label = d[1].float().to(device)
                 event_label = label[:, 0]
                 time_label = label[:, 1]
 
                 pred = model(data, event_label, time_label)
-
-                # 确保维度匹配
-                if pred.dim() == 1:
-                    pred = pred.unsqueeze(1)
-                event_label = event_label.view_as(pred)
-
                 loss = cross(pred, event_label)
                 loss.backward()
                 optimizer.step()
 
                 train_loss += loss.item()
-                pred_labels = (torch.sigmoid(pred) >= 0.5).float()
+                pred_labels = (pred >= 0.5).float()
                 correct = (pred_labels == event_label).sum().item()
                 total_correct += correct
                 total_samples += event_label.size(0)
 
-            avg_loss = train_loss / len(train_loader)
+            avg_loss = train_loss / len(train_data)
             avg_accuracy = total_correct / total_samples
-
-            if world_size > 1:
-                avg_loss = torch.tensor(avg_loss).to(rank)
-                avg_accuracy = torch.tensor(avg_accuracy).to(rank)
-                dist.all_reduce(avg_loss)
-                dist.all_reduce(avg_accuracy)
-                avg_loss = avg_loss.item() / world_size
-                avg_accuracy = avg_accuracy.item() / world_size
 
             losses.append(avg_loss)
             accuracies.append(avg_accuracy)
 
-            if rank == 0:
-                logger.info(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
+            logger.info(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
 
-                if (e + 1) % 10 == 0:
-                    checkpoint = {
-                        'epoch': e + 1,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'loss': avg_loss,
-                    }
-                    torch.save(checkpoint, f'checkpoint_epoch_{e+1}.pt')
+            # 定期保存检查点
+            # if (e + 1) % 10 == 0:
+            #     torch.save({
+            #         'epoch': e + 1,
+            #         'model_state_dict': model.state_dict(),
+            #         'optimizer_state_dict': optimizer.state_dict(),
+            #         'loss': avg_loss,
+            #     }, os.path.join('train', folder_path, f'checkpoint_epoch_{e+1}.pt'))
 
     except Exception as e:
         logger.error(f"训练过程发生错误: {str(e)}")
         raise
-    finally:
-        cleanup()
 
     return losses, accuracies
 
@@ -163,56 +124,154 @@ def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def process_model_training(folder_path, epochs, world_size):
-    try:
-        if not torch.cuda.is_available() and world_size > 1:
-            logger.warning("没有找到GPU，将使用CPU进行训练")
-            world_size = 1
+def batch_process_folders(folder_list, epochs, device, memory_threshold=0.9, wait_time=30):
+    """批量处理文件夹，支持等待和重试"""
+    active_models = {}
+    results = {}
+    pending_folders = folder_list.copy()  # 待处理的文件夹
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    while pending_folders:
+        # 尝试加载新模型
+        current_batch = []
+        for folder in pending_folders[:]:  # 使用切片创建副本进行迭代
+            if not is_gpu_memory_available(memory_threshold):
+                logger.info("GPU内存已达到阈值，等待当前批次处理完成")
+                break
 
-        # 将模型加载移到设备初始化之后
-        make_dir(os.path.join('train', folder_path))
+            try:
+                logger.info(f"尝试加载文件夹: {folder}")
+                model = torch.load(os.path.join(folder, 'model.pt'), map_location=device)
+                train_data = torch.load(os.path.join(folder, 'train_data.pt'), map_location='cpu')
 
-        if world_size > 1:
-            mp.spawn(
-                train_model_distributed,
-                args=(world_size, folder_path, epochs, device),
-                nprocs=world_size,
-                join=True
-            )
-        else:
-            # 单GPU或CPU训练
-            model = torch.load(os.path.join(folder_path, 'model.pt'), map_location=device)
-            train_data = torch.load(os.path.join(folder_path, 'train_data.pt'), map_location=device)
-            optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
-            loss, acc = train_model_distributed(0, 1, model, train_data, optimizer, epochs, device)
-            plot(loss, acc, os.path.join('train', folder_path))
+                train_loader = torch.utils.data.DataLoader(
+                    train_data.dataset,
+                    batch_size=min(train_data.batch_size, 16),
+                    shuffle=True,
+                    num_workers=2,
+                    pin_memory=True
+                )
 
-    except Exception as e:
-        logger.error(f"处理文件夹 {folder_path} 时发生错误: {str(e)}")
-        raise
+                optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
+                model = model.to(device)
+
+                active_models[folder] = {
+                    'model': model,
+                    'train_loader': train_loader,
+                    'optimizer': optimizer,
+                    'losses': [],
+                    'accuracies': [],
+                    'epoch': 0
+                }
+                make_dir(os.path.join('train', folder))
+                current_batch.append(folder)
+                pending_folders.remove(folder)
+
+            except Exception as e:
+                logger.error(f"加载文件夹 {folder} 失败: {str(e)}")
+                continue
+
+        # 训练当前批次的模型
+        if active_models:
+            cross = nn.CrossEntropyLoss()
+
+            for epoch in range(epochs):
+                for folder in current_batch:
+                    if folder not in active_models:
+                        continue
+
+                    data = active_models[folder]
+                    model = data['model']
+                    train_loader = data['train_loader']
+                    optimizer = data['optimizer']
+
+                    model.train()
+                    train_loss = 0
+                    total_correct = 0
+                    total_samples = 0
+
+                    for batch in train_loader:
+                        optimizer.zero_grad()
+                        x = batch[0].float().to(device)
+                        label = batch[1].float().to(device)
+                        event_label = label[:, 0]
+                        time_label = label[:, 1]
+
+                        pred = model(x, event_label, time_label)
+                        loss = cross(pred, event_label)
+                        loss.backward()
+                        optimizer.step()
+
+                        train_loss += loss.item()
+                        pred_labels = (pred >= 0.5).float()
+                        correct = (pred_labels == event_label).sum().item()
+                        total_correct += correct
+                        total_samples += event_label.size(0)
+
+                        # 释放不需要的张量
+                        del x, label, pred
+                        torch.cuda.empty_cache()
+
+                    avg_loss = train_loss / len(train_loader)
+                    avg_accuracy = total_correct / total_samples
+
+                    data['losses'].append(avg_loss)
+                    data['accuracies'].append(avg_accuracy)
+                    data['epoch'] = epoch + 1
+
+                    logger.info(f"文件夹: {folder}, Epoch {epoch + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
+
+                    if (epoch + 1) % 10 == 0:
+                        # 保存检查点
+                        torch.save({
+                            'epoch': epoch + 1,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'loss': avg_loss,
+                        }, os.path.join('train', folder, f'checkpoint_epoch_{epoch+1}.pt'))
+
+                    # 保存结果并释放内存
+                    if epoch == epochs - 1:
+                        results[folder] = {
+                            'losses': data['losses'],
+                            'accuracies': data['accuracies']
+                        }
+                        plot(data['losses'], data['accuracies'], os.path.join('train', folder))
+
+                        # 释放该模型的内存
+                        del active_models[folder]
+                        torch.cuda.empty_cache()
+                        gc.collect()
+                        logger.info(f"完成处理文件夹 {folder} 并释放内存")
+
+        # 如果还有待处理的文件夹，等待一段时间后继续
+        if pending_folders:
+            logger.info(f"等待 {wait_time} 秒后处理剩余文件夹: {pending_folders}")
+            time.sleep(wait_time)
+            torch.cuda.empty_cache()
+            gc.collect()
+
+    return results
 
 if __name__ == "__main__":
-    # 设置多进程启动方式为spawn
-    mp.set_start_method('spawn', force=True)
-
-    parser = argparse.ArgumentParser(description="Train a neural network with multi-processing")
+    parser = argparse.ArgumentParser(description="Train a neural network on single GPU")
     parser.add_argument("--folder", type=str, help="model file")
     parser.add_argument("--m", type=int, default=2000, help="number of epochs")
-    parser.add_argument("--world_size", type=int, default=torch.cuda.device_count(), help="number of processes")
+    parser.add_argument("--wait", type=int, default=30, help="waiting time between batches (seconds)")
     args = parser.parse_args()
 
-    set_seed(42)
+    set_seed(22222)
 
     try:
-        # 直接处理每个文件夹，不使用进程池
-        for folder in args.folder.split(","):
-            process_model_training(
-                folder,
-                epochs=args.m,
-                world_size=min(args.world_size, torch.cuda.device_count())
-            )
+        folder_list = args.folder.split(",")
+        results = batch_process_folders(
+            folder_list,
+            args.m,
+            torch.device("cuda:0"),
+            wait_time=args.wait
+        )
+
+        logger.info("所有文件夹处理完成")
+
     except Exception as e:
         logger.error(f"程序执行失败: {str(e)}")
         raise
