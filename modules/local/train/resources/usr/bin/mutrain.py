@@ -95,7 +95,6 @@ def train_model(model, train_data, optimizer, epochs, device):
             if e % 100 == 0 and e > 0:
                 logger.info(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
 
-            # logger.info(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
 
     except Exception as e:
         logger.error(f"训练过程发生错误: {str(e)}")
@@ -163,6 +162,7 @@ def batch_process_folders(folder_list, epochs, wait_time=30):
                     'losses': losses,
                     'accuracies': accuracies
                 }
+                make_dir(os.path.join('train', folder))
                 plot(losses, accuracies, os.path.join('train', folder))
 
                 # 释放GPU资源
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train neural networks on multiple GPUs")
     parser.add_argument("--folder", type=str, help="comma-separated list of model folders")
     parser.add_argument("--m", type=int, default=1000, help="number of epochs")
-    parser.add_argument("--wait", type=int, default=30, help="waiting time between checks (seconds)")
+    parser.add_argument("--wait", type=int, default=3, help="waiting time between checks (seconds)")
     args = parser.parse_args()
 
     set_seed(22222)
