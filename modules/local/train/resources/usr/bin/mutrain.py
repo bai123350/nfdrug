@@ -25,19 +25,27 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def get_gpu_memory():
+def get_gpu_memory(device=0):
     """获取GPU内存使用情况"""
     if torch.cuda.is_available():
-        return torch.cuda.memory_allocated(0), torch.cuda.memory_reserved(0)
+        return torch.cuda.memory_allocated(device), torch.cuda.memory_reserved(device)
     return 0, 0
 
-def is_gpu_memory_available(threshold=0.9):
-    """检查GPU内存是否有足够空间"""
+def is_gpu_memory_available(threshold=0.9, device=0):
+    """检查指定GPU内存是否有足够空间"""
     if torch.cuda.is_available():
-        allocated = torch.cuda.memory_allocated(0)
-        total = torch.cuda.get_device_properties(0).total_memory
+        allocated = torch.cuda.memory_allocated(device)
+        total = torch.cuda.get_device_properties(device).total_memory
         return allocated < threshold * total
     return False
+
+def get_available_gpu():
+    """获取当前可用的GPU"""
+    available_gpus = []
+    for i in range(torch.cuda.device_count()):
+        if is_gpu_memory_available(threshold=0.9, device=i):
+            available_gpus.append(i)
+    return available_gpus
 
 def train_model(model, train_data, optimizer, epochs, device):
     model = model.to(device)
@@ -54,8 +62,8 @@ def train_model(model, train_data, optimizer, epochs, device):
 
             for d in train_data:
                 # 检查GPU内存使用
-                allocated, reserved = get_gpu_memory()
-                if allocated > 0.9 * torch.cuda.get_device_properties(0).total_memory:
+                allocated, reserved = get_gpu_memory(device)
+                if allocated > 0.9 * torch.cuda.get_device_properties(device).total_memory:
                     logger.warning("GPU内存接近上限，等待释放...")
                     torch.cuda.empty_cache()
                     gc.collect()
@@ -84,16 +92,10 @@ def train_model(model, train_data, optimizer, epochs, device):
             losses.append(avg_loss)
             accuracies.append(avg_accuracy)
 
-            logger.info(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
+            if e % 100 == 0 and e > 0:
+                logger.info(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
 
-            # 定期保存检查点
-            # if (e + 1) % 10 == 0:
-            #     torch.save({
-            #         'epoch': e + 1,
-            #         'model_state_dict': model.state_dict(),
-            #         'optimizer_state_dict': optimizer.state_dict(),
-            #         'loss': avg_loss,
-            #     }, os.path.join('train', folder_path, f'checkpoint_epoch_{e+1}.pt'))
+            # logger.info(f"Epoch {e + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
 
     except Exception as e:
         logger.error(f"训练过程发生错误: {str(e)}")
@@ -124,25 +126,25 @@ def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def batch_process_folders(folder_list, epochs, device, memory_threshold=0.9, wait_time=30):
-    """批量处理文件夹，支持等待和重试"""
-    active_models = {}
+def batch_process_folders(folder_list, epochs, wait_time=30):
+    """多GPU批量处理文件夹"""
+    pending_folders = folder_list.copy()
+    active_tasks = {}  # 格式: {gpu_id: folder_name}
     results = {}
-    pending_folders = folder_list.copy()  # 待处理的文件夹
 
-    while pending_folders:
-        # 尝试加载新模型
-        current_batch = []
-        for folder in pending_folders[:]:  # 使用切片创建副本进行迭代
-            if not is_gpu_memory_available(memory_threshold):
-                logger.info("GPU内存已达到阈值，等待当前批次处理完成")
-                break
+    while pending_folders or active_tasks:
+        # 检查当前活跃任务的状态
+        for gpu_id in list(active_tasks.keys()):
+            if not active_tasks[gpu_id]:
+                continue
+
+            folder = active_tasks[gpu_id]
+            device = f"cuda:{gpu_id}"
 
             try:
-                logger.info(f"尝试加载文件夹: {folder}")
+                # 加载并训练模型
                 model = torch.load(os.path.join(folder, 'model.pt'), map_location=device)
                 train_data = torch.load(os.path.join(folder, 'train_data.pt'), map_location='cpu')
-
                 train_loader = torch.utils.data.DataLoader(
                     train_data.dataset,
                     batch_size=min(train_data.batch_size, 16),
@@ -154,109 +156,46 @@ def batch_process_folders(folder_list, epochs, device, memory_threshold=0.9, wai
                 optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
                 model = model.to(device)
 
-                active_models[folder] = {
-                    'model': model,
-                    'train_loader': train_loader,
-                    'optimizer': optimizer,
-                    'losses': [],
-                    'accuracies': [],
-                    'epoch': 0
+                losses, accuracies = train_model(model, train_loader, optimizer, epochs, device)
+
+                # 保存结果
+                results[folder] = {
+                    'losses': losses,
+                    'accuracies': accuracies
                 }
-                make_dir(os.path.join('train', folder))
-                current_batch.append(folder)
-                pending_folders.remove(folder)
+                plot(losses, accuracies, os.path.join('train', folder))
+
+                # 释放GPU资源
+                del model
+                torch.cuda.empty_cache()
+                active_tasks[gpu_id] = None
+
+                logger.info(f"完成处理文件夹 {folder} 在 GPU {gpu_id}")
 
             except Exception as e:
-                logger.error(f"加载文件夹 {folder} 失败: {str(e)}")
+                logger.error(f"处理文件夹 {folder} 在 GPU {gpu_id} 时发生错误: {str(e)}")
+                active_tasks[gpu_id] = None
+
+        # 为空闲的GPU分配新任务
+        available_gpus = get_available_gpu()
+        for gpu_id in available_gpus:
+            if gpu_id in active_tasks and active_tasks[gpu_id] is not None:
                 continue
 
-        # 训练当前批次的模型
-        if active_models:
-            cross = nn.CrossEntropyLoss()
+            if pending_folders:
+                folder = pending_folders.pop(0)
+                active_tasks[gpu_id] = folder
+                logger.info(f"分配文件夹 {folder} 到 GPU {gpu_id}")
 
-            for epoch in range(epochs):
-                for folder in current_batch:
-                    if folder not in active_models:
-                        continue
-
-                    data = active_models[folder]
-                    model = data['model']
-                    train_loader = data['train_loader']
-                    optimizer = data['optimizer']
-
-                    model.train()
-                    train_loss = 0
-                    total_correct = 0
-                    total_samples = 0
-
-                    for batch in train_loader:
-                        optimizer.zero_grad()
-                        x = batch[0].float().to(device)
-                        label = batch[1].float().to(device)
-                        event_label = label[:, 0]
-                        time_label = label[:, 1]
-
-                        pred = model(x, event_label, time_label)
-                        loss = cross(pred, event_label)
-                        loss.backward()
-                        optimizer.step()
-
-                        train_loss += loss.item()
-                        pred_labels = (pred >= 0.5).float()
-                        correct = (pred_labels == event_label).sum().item()
-                        total_correct += correct
-                        total_samples += event_label.size(0)
-
-                        # 释放不需要的张量
-                        del x, label, pred
-                        torch.cuda.empty_cache()
-
-                    avg_loss = train_loss / len(train_loader)
-                    avg_accuracy = total_correct / total_samples
-
-                    data['losses'].append(avg_loss)
-                    data['accuracies'].append(avg_accuracy)
-                    data['epoch'] = epoch + 1
-
-                    logger.info(f"文件夹: {folder}, Epoch {epoch + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
-
-                    if (epoch + 1) % 10 == 0:
-                        # 保存检查点
-                        torch.save({
-                            'epoch': epoch + 1,
-                            'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict(),
-                            'loss': avg_loss,
-                        }, os.path.join('train', folder, f'checkpoint_epoch_{epoch+1}.pt'))
-
-                    # 保存结果并释放内存
-                    if epoch == epochs - 1:
-                        results[folder] = {
-                            'losses': data['losses'],
-                            'accuracies': data['accuracies']
-                        }
-                        plot(data['losses'], data['accuracies'], os.path.join('train', folder))
-
-                        # 释放该模型的内存
-                        del active_models[folder]
-                        torch.cuda.empty_cache()
-                        gc.collect()
-                        logger.info(f"完成处理文件夹 {folder} 并释放内存")
-
-        # 如果还有待处理的文件夹，等待一段时间后继续
-        if pending_folders:
-            logger.info(f"等待 {wait_time} 秒后处理剩余文件夹: {pending_folders}")
-            time.sleep(wait_time)
-            torch.cuda.empty_cache()
-            gc.collect()
+        time.sleep(wait_time)  # 等待一段时间再检查状态
 
     return results
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a neural network on single GPU")
-    parser.add_argument("--folder", type=str, help="model file")
-    parser.add_argument("--m", type=int, default=2000, help="number of epochs")
-    parser.add_argument("--wait", type=int, default=30, help="waiting time between batches (seconds)")
+    parser = argparse.ArgumentParser(description="Train neural networks on multiple GPUs")
+    parser.add_argument("--folder", type=str, help="comma-separated list of model folders")
+    parser.add_argument("--m", type=int, default=1000, help="number of epochs")
+    parser.add_argument("--wait", type=int, default=30, help="waiting time between checks (seconds)")
     args = parser.parse_args()
 
     set_seed(22222)
@@ -266,14 +205,12 @@ if __name__ == "__main__":
         results = batch_process_folders(
             folder_list,
             args.m,
-            torch.device("cuda:0"),
             wait_time=args.wait
         )
-
         logger.info("所有文件夹处理完成")
-
     except Exception as e:
         logger.error(f"程序执行失败: {str(e)}")
         raise
+
 
 
