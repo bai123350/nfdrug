@@ -10,9 +10,15 @@ process VISIABLE {
     val identifier
 
     output:
-    val identifier
+    path("") , emit : pdf
+    path "versions.yml", emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
+
+    def prefix = task.ext.prefix ?: "${identifier}_visable"
     """
 
     """
