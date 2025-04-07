@@ -13,6 +13,7 @@ import logging
 import gc
 import time
 from sklearn.metrics import confusion_matrix, roc_curve, auc
+import json
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -250,8 +251,15 @@ def batch_process_folders(folder_list, epochs, wait_time=30):
                 # 保存测试结果
                 results[folder].update({
                     'test_loss': test_loss,
-                    'test_accuracy': test_accuracy
+                    'test_accuracy': test_accuracy,
+                    'test_predictions': predictions,
+                    'test_true_labels': true_labels
                 })
+
+                # 保存结果到文件
+                results_file = os.path.join('train', folder, 'train_res.json')
+                with open(results_file, 'w') as f:
+                    json.dump(results[folder], f, indent=4)
 
                 # 绘制测试结果图
                 plot_test_results(predictions, true_labels, os.path.join('train', folder))
