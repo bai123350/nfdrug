@@ -261,6 +261,9 @@ def batch_process_folders(folder_list, epochs, wait_time=30):
                 with open(results_file, 'w') as f:
                     json.dump(results[folder], f, indent=4)
 
+                torch.save(train_data, os.path.join('train', folder, "train_data.pt"))
+                torch.save(test_data, os.path.join('train', folder, "test_data.pt"))
+
                 # 绘制测试结果图
                 plot_test_results(predictions, true_labels, os.path.join('train', folder))
 

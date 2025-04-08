@@ -1,5 +1,5 @@
 process MUTRAIN {
-    label 'process_medium'
+    label 'process_high_memory'
 
     conda "${moduleDir}/environment.yml"
 

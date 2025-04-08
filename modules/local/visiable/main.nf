@@ -1,13 +1,14 @@
 process VISIABLE {
 
-    label 'process_medium'
+    label 'process_high_memory'
 
     conda "${moduleDir}/environment.yml"
 
     publishDir "${params.outdir}/visiable", mode: 'copy'
 
     input:
-    val identifier
+    tuple val(meta), val(reads)
+    path(modelfoler)
 
     output:
     path("") , emit : pdf
@@ -18,7 +19,7 @@ process VISIABLE {
 
     script:
 
-    def prefix = task.ext.prefix ?: "${identifier}_visable"
+    def prefix = task.ext.prefix ?: "_visable"
     """
 
     """
