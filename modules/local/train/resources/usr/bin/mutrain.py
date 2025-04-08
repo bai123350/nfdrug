@@ -251,9 +251,9 @@ def batch_process_folders(folder_list, epochs, wait_time=30):
                 # 保存测试结果
                 results[folder].update({
                     'test_loss': test_loss,
-                    'test_accuracy': test_accuracy,
-                    'test_predictions': predictions,
-                    'test_true_labels': true_labels
+                    'test_accuracy': test_accuracy
+                    # 'test_predictions': predictions,
+                    # 'test_true_labels': true_labels
                 })
 
                 # 保存结果到文件
