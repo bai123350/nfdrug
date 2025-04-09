@@ -11,7 +11,7 @@ process MUTRAIN {
 
     output:
     val(meta), emit: meta_id
-    // path("*.pdf"), emit: pdf
+    path("train/*"), emit: train_dirs
     path "versions.yml", emit: versions
 
     when:
