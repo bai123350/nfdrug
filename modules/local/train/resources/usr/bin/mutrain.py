@@ -14,6 +14,7 @@ import gc
 import time
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 import json
+import concurrent.futures
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -162,11 +163,6 @@ def plot_test_results(predictions, true_labels, m):
 
     # 混淆矩阵热图
     cm = confusion_matrix(true_labels, predictions)
-    # plt.subplot(1, 2, 1)
-    # sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    # plt.title('Confusion Matrix')
-    # plt.xlabel('Predicted')
-    # plt.ylabel('True')
     plt.subplot(1, 2, 1)
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     plt.title('Confusion Matrix')
@@ -195,112 +191,126 @@ def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def batch_process_folders(folder_list, epochs, wait_time=30):
-    """多GPU批量处理文件夹"""
-    pending_folders = folder_list.copy()
-    active_tasks = {}  # 格式: {gpu_id: folder_name}
+def allocate_folders_to_gpus(folder_list):
+    """将文件夹平均分配到可用GPU，每个GPU最多20个任务"""
+    num_gpus = torch.cuda.device_count()
+    gpu_allocations = {i: [] for i in range(num_gpus)}
+
+    # 计算每个GPU应分配的任务数
+    folders_per_gpu = min(20, len(folder_list) // num_gpus + (1 if len(folder_list) % num_gpus else 0))
+
+    for i, folder in enumerate(folder_list):
+        gpu_id = i // folders_per_gpu % num_gpus
+        gpu_allocations[gpu_id].append(folder)
+
+    for gpu_id, folders in gpu_allocations.items():
+        logger.info(f"GPU {gpu_id} 分配到 {len(folders)} 个任务")
+
+    return gpu_allocations
+
+def process_gpu_batch(folders, gpu_id, epochs):
+    """处理单个GPU上的所有任务"""
+    device = f"cuda:{gpu_id}"
     results = {}
 
-    while pending_folders or active_tasks:
-        # 检查当前活跃任务的状态
-        for gpu_id in list(active_tasks.keys()):
-            if not active_tasks[gpu_id]:
-                continue
+    # 设置较大的batch size和优化数据加载
+    batch_size = 64
+    num_workers = 4
 
-            folder = active_tasks[gpu_id]
-            device = f"cuda:{gpu_id}"
+    for folder in folders:
+        try:
+            # 加载模型和数据
+            model = torch.load(os.path.join(folder, 'model.pt'), map_location=device)
+            train_data = torch.load(os.path.join(folder, 'train_data.pt'), map_location='cpu')
+            test_data = torch.load(os.path.join(folder, 'test_data.pt'), map_location='cpu')
 
-            try:
-                # 加载并训练模型
-                model = torch.load(os.path.join(folder, 'model.pt'), map_location=device)
-                train_data = torch.load(os.path.join(folder, 'train_data.pt'), map_location='cpu')
-                test_data = torch.load(os.path.join(folder, 'test_data.pt'), map_location='cpu')
-                train_loader = torch.utils.data.DataLoader(
-                    train_data.dataset,
-                    batch_size=min(train_data.batch_size, 16),
-                    shuffle=True,
-                    num_workers=2,
-                    pin_memory=True
-                )
+            train_loader = torch.utils.data.DataLoader(
+                train_data.dataset,
+                batch_size=batch_size,
+                shuffle=True,
+                num_workers=num_workers,
+                pin_memory=True,
+                prefetch_factor=2
+            )
 
-                optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
-                model = model.to(device)
+            optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
+            model = model.to(device)
 
-                losses, accuracies = train_model(model, train_loader, optimizer, epochs, device)
+            # 训练模型
+            losses, accuracies = train_model(model, train_loader, optimizer, epochs, device)
 
-                # 保存结果
-                results[folder] = {
-                    'losses': losses,
-                    'accuracies': accuracies
-                }
-                make_dir(os.path.join('train', folder))
-                plot(losses, accuracies, os.path.join('train', folder))
+            # 评估模型
+            test_loader = torch.utils.data.DataLoader(
+                test_data.dataset,
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=num_workers,
+                pin_memory=True
+            )
 
-                # 在训练完成后进行测试评估
-                test_loader = torch.utils.data.DataLoader(
-                    test_data.dataset,
-                    batch_size=min(test_data.batch_size, 16),
-                    shuffle=False,
-                    num_workers=2,
-                    pin_memory=True
-                )
+            test_loss, test_accuracy, predictions, true_labels = evaluate_model(
+                model, test_loader, device)
 
-                test_loss, test_accuracy, predictions, true_labels = evaluate_model(model, test_loader, device)
-                logger.info(f"测试结果 - Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.4f}")
+            # 保存结果
+            save_path = os.path.join('train', folder)
+            make_dir(save_path)
 
-                # 保存测试结果
-                results[folder].update({
-                    'test_loss': test_loss,
-                    'test_accuracy': test_accuracy
-                    # 'test_predictions': predictions,
-                    # 'test_true_labels': true_labels
-                })
+            results[folder] = {
+                'losses': losses,
+                'accuracies': accuracies,
+                'test_loss': test_loss,
+                'test_accuracy': test_accuracy
+            }
 
-                # 保存结果到文件
-                results_file = os.path.join('train', folder, 'train_res.json')
-                with open(results_file, 'w') as f:
-                    json.dump(results[folder], f, indent=4)
+            # 保存结果和图表
+            with open(os.path.join(save_path, 'train_res.json'), 'w') as f:
+                json.dump(results[folder], f, indent=4)
 
-                torch.save(train_data, os.path.join('train', folder, "train_data.pt"))
-                torch.save(test_data, os.path.join('train', folder, "test_data.pt"))
+            plot(losses, accuracies, save_path)
+            plot_test_results(predictions, true_labels, save_path)
+            torch.save(model.state_dict(), os.path.join(save_path, 'best_model.pt'))
 
-                # 绘制测试结果图
-                plot_test_results(predictions, true_labels, os.path.join('train', folder))
+            logger.info(f"完成处理 {folder} 在 GPU {gpu_id}")
 
-                # 保存最优模型
-                torch.save(model.state_dict(), os.path.join('train', folder, 'best_model.pt'))
+            # 清理内存
+            del model, train_data, test_data
+            torch.cuda.empty_cache()
 
-                # 释放GPU资源
-                del model
-                torch.cuda.empty_cache()
-                active_tasks[gpu_id] = None
-
-                logger.info(f"完成处理文件夹 {folder} 在 GPU {gpu_id}")
-
-            except Exception as e:
-                logger.error(f"处理文件夹 {folder} 在 GPU {gpu_id} 时发生错误: {str(e)}")
-                active_tasks[gpu_id] = None
-
-        # 为空闲的GPU分配新任务
-        available_gpus = get_available_gpu()
-        for gpu_id in available_gpus:
-            if gpu_id in active_tasks and active_tasks[gpu_id] is not None:
-                continue
-
-            if pending_folders:
-                folder = pending_folders.pop(0)
-                active_tasks[gpu_id] = folder
-                logger.info(f"分配文件夹 {folder} 到 GPU {gpu_id}")
-
-        time.sleep(wait_time)  # 等待一段时间再检查状态
+        except Exception as e:
+            logger.error(f"处理失败 {folder}: {str(e)}")
+            continue
 
     return results
+
+def batch_process_folders(folder_list, epochs, wait_time=30):
+    """改进的多GPU批量处理"""
+    # 预分配任务到GPU
+    gpu_allocations = allocate_folders_to_gpus(folder_list)
+    all_results = {}
+
+    # 并行处理每个GPU上的任务
+    with concurrent.futures.ThreadPoolExecutor(max_workers=torch.cuda.device_count()) as executor:
+        future_to_gpu = {
+            executor.submit(process_gpu_batch, folders, gpu_id, epochs): gpu_id
+            for gpu_id, folders in gpu_allocations.items() if folders
+        }
+
+        for future in concurrent.futures.as_completed(future_to_gpu):
+            gpu_id = future_to_gpu[future]
+            try:
+                results = future.result()
+                all_results.update(results)
+            except Exception as e:
+                logger.error(f"GPU {gpu_id} 处理失败: {str(e)}")
+
+    return all_results
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train neural networks on multiple GPUs")
     parser.add_argument("--folder", type=str, help="comma-separated list of model folders")
     parser.add_argument("--m", type=int, default=1000, help="number of epochs")
     parser.add_argument("--wait", type=int, default=3, help="waiting time between checks (seconds)")
+    parser.add_argument("--batch_size", type=int, default=64, help="batch size for training")
     args = parser.parse_args()
 
     set_seed(22222)

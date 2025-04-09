@@ -22,7 +22,7 @@ process MUTRAIN {
     def folders = modelfoler instanceof List ? modelfoler.join(',') : [modelfoler].join(',')
 
     """
-    mutrain.py --folder ${folders}
+    mutrainco.py --folder ${folders}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
