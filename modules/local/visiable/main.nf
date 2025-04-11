@@ -1,6 +1,6 @@
 process VISIABLE {
 
-    label 'process_high'
+    label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
 
@@ -8,7 +8,7 @@ process VISIABLE {
 
     input:
     tuple val(meta), val(reads)
-    path(modelfoler)
+    path(trainfoler)
 
     output:
     path("") , emit : pdf
@@ -19,14 +19,22 @@ process VISIABLE {
 
     script:
 
-    def prefix = task.ext.prefix ?: "_visable"
+    def prefix = task.ext.prefix ?: "visable"
     """
+    visiable.py --folder ${trainfoler}
 
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        numpy: \$(python -c "import numpy; print(numpy.__version__)")
+        torch: \$(python -c "import torch; print(torch.__version__,torch.cuda.is_available())")
+    END_VERSIONS
     """
 
     stub:
+    def prefix = task.ext.prefix ?: "visable"
     """
-
+    touch "${prefix}_visable.pdf"
+    touch "versions.yml"
     """
 }
 

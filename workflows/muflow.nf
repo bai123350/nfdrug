@@ -2,6 +2,7 @@ include { DATATETCH        } from '../modules/local/datafetch/main'
 include { MUTILDATAPROCESS } from '../modules/local/dataprocess/mudrug'
 include { MUALLMODELS      } from '../modules/local/models/mumodel'
 include { MUTRAIN          } from '../modules/local/train/mutrain'
+include { VISIABLE         } from '../modules/local/visiable/main'
 
 
 
@@ -35,6 +36,13 @@ workflow MURUNDATA {
         samplesheet,
         MUALLMODELS.out.model_dirs,
     )
+
+    VISIABLE(
+        samplesheet,
+        MUTRAIN.out.train_dirs,
+    )
+
+
 
     // emit:
     // json_report = DATATETCH.out.json // channel: /path/to/multiqc_report.html
