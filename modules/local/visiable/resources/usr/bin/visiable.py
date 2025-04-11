@@ -36,6 +36,7 @@ class DataUtil(Process):
 
 
 
+s
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', type=str, default="")
