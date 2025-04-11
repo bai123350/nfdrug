@@ -11,7 +11,7 @@ process VISIABLE {
     path(trainfoler)
 
     output:
-    path("") , emit : pdf
+    // path("*pdf") , emit : pdf
     path "versions.yml", emit: versions
 
     when:
@@ -20,8 +20,9 @@ process VISIABLE {
     script:
 
     def prefix = task.ext.prefix ?: "visable"
+    def folders = trainfoler instanceof List ? trainfoler.join(',') : [trainfoler].join(',')
     """
-    visiable.py --folder ${trainfoler}
+    visiable.py --dir ${folders}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
