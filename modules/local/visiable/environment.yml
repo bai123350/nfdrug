@@ -2,9 +2,10 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python=3.11 
+  - python=3.11
   - pip:
       - numpy==1.26.4
       - scikit-learn==1.5.2
       - torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
       - matplotlib==3.9.2
+      - seaborn==0.13.1
