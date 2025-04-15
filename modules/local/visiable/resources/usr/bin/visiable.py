@@ -67,19 +67,19 @@ class DataUtil(Process):
                 logger.info(f"Processing {train_event_labels}...")
                 logger.info(f"Processing {train_event_labels.shape}...")
 
-                # 逻辑回归
-                lr_model = LogisticRegression(max_iter=1000)
+
+                lr_model = LogisticRegression(max_iter=100)
                 lr_model.fit(train_features.numpy(), train_event_labels.numpy())
                 lr_predictions = lr_model.predict(test_features.numpy())
                 lr_accuracy = accuracy_score(test_event_labels.numpy(), lr_predictions)
 
-                # 随机森林
-                rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+                rf_model = RandomForestClassifier(n_estimators=50, random_state=42)
                 rf_model.fit(train_features.numpy(), train_event_labels.numpy())
                 rf_predictions = rf_model.predict(test_features.numpy())
                 rf_accuracy = accuracy_score(test_event_labels.numpy(), rf_predictions)
 
-                # 神经网络
+
                 nn_model = nn.Sequential(
                     nn.Linear(train_features.shape[1], 64),
                     nn.ReLU(),

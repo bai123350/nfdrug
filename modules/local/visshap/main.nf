@@ -6,14 +6,16 @@ process VISSHAP {
     publishDir "${params.outdir}/visshap", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(input_file)
+    tuple val(meta), val(reads)
+    path(trainfoler)
 
     output:
-    path("*.shap"), emit: shap_files
-
+    // path("*pdf") , emit : pdf
+    path "versions.yml", emit: versions
 
     script:
     """
-    shap.py --input ${input_file} --output ${sample_id}.shap
+    shap.py
     """
+
 }

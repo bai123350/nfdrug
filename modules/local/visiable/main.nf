@@ -11,6 +11,7 @@ process VISIABLE {
     path(trainfoler)
 
     output:
+    val(meta), emit: meta_id
     path("*pdf") , emit : pdf
     path "versions.yml", emit: versions
 
@@ -18,7 +19,6 @@ process VISIABLE {
     task.ext.when == null || task.ext.when
 
     script:
-
     def prefix = task.ext.prefix ?: "visable"
     def folders = trainfoler instanceof List ? trainfoler.join(',') : [trainfoler].join(',')
     """

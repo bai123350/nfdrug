@@ -3,6 +3,7 @@ include { MUTILDATAPROCESS } from '../modules/local/dataprocess/mudrug'
 include { MUALLMODELS      } from '../modules/local/models/mumodel'
 include { MUTRAIN          } from '../modules/local/train/mutrain'
 include { VISIABLE         } from '../modules/local/visiable/main'
+include { VISSHAP          } from '../modules/local/visshap/main'
 
 
 
@@ -39,6 +40,11 @@ workflow MURUNDATA {
 
     VISIABLE(
         samplesheet,
+        MUTRAIN.out.train_dirs,
+    )
+
+    VISSHAP(
+        VISIABLE.out.meta_id,
         MUTRAIN.out.train_dirs,
     )
 
