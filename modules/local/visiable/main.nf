@@ -11,7 +11,7 @@ process VISIABLE {
     path(trainfoler)
 
     output:
-    // path("*pdf") , emit : pdf
+    path("*pdf") , emit : pdf
     path "versions.yml", emit: versions
 
     when:
