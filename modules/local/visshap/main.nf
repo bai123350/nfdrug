@@ -30,6 +30,7 @@ process VISSHAP {
     END_VERSIONS
     """
 
+
     stub:
     def prefix = task.ext.prefix ?: "shap"
     """

@@ -136,8 +136,11 @@ class BFRegNN_COX(nn.Module):
 
     def forward(self, x, event, time):
         x = self.bfregNN(x)
+        print(x)
         x = self.sig(self.flat(self.linear(x)).squeeze(-1))
         return x
+
+
 
 class BuildModel(object):
     def build_bfregNN_model(gene_num, gene_num2, gene_adj, gene_adj2,
