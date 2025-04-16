@@ -18,8 +18,9 @@ process DATATETCH {
     path("*.json"), emit: json
 
     script:
+    def score = task.ext.score ?: params.score
     """
-    fetch.py --score ${params.score} --out "res.json" --path1 ${reads[0]} --path2 ${reads[1]}
+    fetch.py --score ${score} --out "res.json" --path1 ${reads[0]} --path2 ${reads[1]}
     """
 
     stub:
