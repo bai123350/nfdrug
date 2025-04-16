@@ -7,7 +7,9 @@ process VISSHAP {
 
     input:
     tuple val(meta), val(reads)
-    path(trainfoler)
+    path(json, stageAs : "result.json")
+    path(allfolders, stageAs: "allfolders/*")
+    path(trainfoler, stageAs: "trainfolder/*")
 
     output:
     // path("*pdf") , emit : pdf
@@ -15,8 +17,10 @@ process VISSHAP {
 
     script:
     def prefix = task.ext.prefix ?: "shap"
+    def folders = trainfoler instanceof List ? trainfoler.join(',') : [trainfoler].join(',')
+    def allf = allfolders instanceof List ? allfolders.join(',') : [allfolders].join(',')
     """
-    shap.py --dir ${trainfoler}
+    shap.py --dir ${folders} --all ${allf}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -44,7 +44,9 @@ workflow MURUNDATA {
     )
 
     VISSHAP(
-        VISIABLE.out.meta_id,
+        samplesheet,
+        DATATETCH.out.json,
+        MUTILDATAPROCESS.out.all_folders,
         MUTRAIN.out.train_dirs,
     )
 
