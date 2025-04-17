@@ -136,9 +136,9 @@ class BFRegNN_COX(nn.Module):
 
     def forward(self, x, event, time):
         x = self.bfregNN(x)
-        print(x)
+        index = torch.argmax(x, dim=-1)
         x = self.sig(self.flat(self.linear(x)).squeeze(-1))
-        return x
+        return x,index
 
 
 

@@ -2,7 +2,7 @@
 
 import argparse
 import json
-from pyexpat import model
+# from pyexpat import model
 from sympy import im
 import torch
 import torch.nn as nn
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 class Process:
     def __init__(self, args):
         self.file_list = args.dir.split(",")
+        self.model_list = args.model.split(",")
 
     def evaluate_model(self ,model, test_loader, device):
         # model.eval()
@@ -31,11 +32,13 @@ class Process:
         with torch.no_grad():
             for d in test_loader:
                 data = d[0].float().to(device)
+                print(data.shape)
                 label = d[1].float().to(device)
                 event_label = label[:, 0]
                 time_label = label[:, 1]
 
-                pred = model(data, event_label, time_label)
+                pred,index = model(data, event_label, time_label)
+                print(index)
                 loss = cross(pred, event_label)
 
                 test_loss += loss.item()
@@ -69,12 +72,15 @@ class Process:
                 break
         return top_10_acc
 
+
     def get(self, p):
         for path in self.file_list:
             if path.split('/')[-1] == p:
                 # train_data = torch.load(os.path.join(path, 'train_data.pt'), map_location='cpu')
                 test_data = torch.load(os.path.join(path, 'test_data.pt'))
                 # test_data = test_data.to('cuda:0')
+                model = torch.load(os.path.join("modelfolder",p,"model.pt"))  # Replace 'Net' with the actual model class used during training
+                model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt')))
                 test_loader = torch.utils.data.DataLoader(
                         test_data.dataset,
                         batch_size=min(test_data.batch_size, 16),
@@ -82,7 +88,6 @@ class Process:
                         num_workers=2,
                         pin_memory=True
                     )
-                model = torch.load(os.path.join(path, 'best_model.pt'))
                 # model = model.to('cuda:0')
                 test_loss, test_accuracy, predictions, true_labels = self.evaluate_model(model, test_loader, "cuda:0")
 
@@ -99,10 +104,12 @@ class AllDir(object):
                 basic = json.load(open(os.path.join(path, 'basic.json'), 'r'))
                 drug = json.load(open(os.path.join(path, 'drug.json'), 'r'))
                 drug = {k.replace(' ',''): v for k, v in drug.items()}
-                logger.info(f"{drug}")
+                logger.info(f"{drug[p.split('_')[0]]},{len(drug[p.split('_')[0]])}")
+                logger.info(f"{drug[p.split('_')[1]]},{len(drug[p.split('_')[1]])}")
                 # all_test_acc.update({"basic": basic, "drug": drug})
 
         return all_test_acc
+
 
 def compute_gradients(model, inputs, target_class):
     """
@@ -126,6 +133,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', type=str, default="")
     parser.add_argument('--all', type=str, default="")
+    parser.add_argument('--model', type=str, default="")
     args = parser.parse_args()
 
     data_util = Process(args)

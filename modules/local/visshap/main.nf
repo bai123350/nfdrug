@@ -9,6 +9,7 @@ process VISSHAP {
     tuple val(meta), val(reads)
     path(json, stageAs : "result.json")
     path(allfolders, stageAs: "allfolders/*")
+    path(modeldirs, stageAs: "modelfolder/*")
     path(trainfoler, stageAs: "trainfolder/*")
 
     output:
@@ -19,8 +20,9 @@ process VISSHAP {
     def prefix = task.ext.prefix ?: "shap"
     def folders = trainfoler instanceof List ? trainfoler.join(',') : [trainfoler].join(',')
     def allf = allfolders instanceof List ? allfolders.join(',') : [allfolders].join(',')
+    def model = modeldirs instanceof List ? modeldirs.join(',') : [modeldirs].join(',')
     """
-    shap.py --dir ${folders} --all ${allf}
+    shap.py --dir ${folders} --all ${allf} --model ${model}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
