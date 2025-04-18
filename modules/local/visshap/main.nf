@@ -22,7 +22,7 @@ process VISSHAP {
     def allf = allfolders instanceof List ? allfolders.join(',') : [allfolders].join(',')
     def model = modeldirs instanceof List ? modeldirs.join(',') : [modeldirs].join(',')
     """
-    shap.py --dir ${folders} --all ${allf} --model ${model}
+    shap.py --dir ${folders} --all ${allf} --model ${model} --gene ${reads[5]}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

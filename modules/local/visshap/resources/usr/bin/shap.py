@@ -2,12 +2,14 @@
 
 import argparse
 import json
+from math import log
 # from pyexpat import model
 from sympy import im
 import torch
 import torch.nn as nn
 import logging
 import os
+import numpy as np
 from net import *
 
 
@@ -78,16 +80,24 @@ class Process:
             if path.split('/')[-1] == p:
                 # train_data = torch.load(os.path.join(path, 'train_data.pt'), map_location='cpu')
                 test_data = torch.load(os.path.join(path, 'test_data.pt'))
+                for batch in test_data:
+                    data_matrix = batch[0].numpy()  # Assuming the first element in the batch is the data matrix
+                    print(data_matrix)
+                    print(data_matrix.shape)
                 # test_data = test_data.to('cuda:0')
                 model = torch.load(os.path.join("modelfolder",p,"model.pt"))  # Replace 'Net' with the actual model class used during training
                 model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt')))
                 test_loader = torch.utils.data.DataLoader(
                         test_data.dataset,
-                        batch_size=min(test_data.batch_size, 16),
+                        # batch_size=min(test_data.batch_size, 16),
+                        batch_size = 4,
                         shuffle=False,
                         num_workers=2,
                         pin_memory=True
                     )
+                x_all = np.load(os.path.join("modelfolder",p,'all.npz'))
+                # print(x_all["x_data"])
+                # print(x_all["x_data"].shape)
                 # model = model.to('cuda:0')
                 test_loss, test_accuracy, predictions, true_labels = self.evaluate_model(model, test_loader, "cuda:0")
 
@@ -98,17 +108,17 @@ class AllDir(object):
         self.file_list = args.all.split(",")
 
     def get(self,p):
-        all_test_acc = {}
         for path in self.file_list:
             if p == path.split("/")[1]:
                 basic = json.load(open(os.path.join(path, 'basic.json'), 'r'))
                 drug = json.load(open(os.path.join(path, 'drug.json'), 'r'))
                 drug = {k.replace(' ',''): v for k, v in drug.items()}
-                logger.info(f"{drug[p.split('_')[0]]},{len(drug[p.split('_')[0]])}")
-                logger.info(f"{drug[p.split('_')[1]]},{len(drug[p.split('_')[1]])}")
+                logger.info(f"{p.split('_')[0]}-{drug[p.split('_')[0]]},{len(drug[p.split('_')[0]])}")
+                logger.info(f"{p.split('_')[1]}-{drug[p.split('_')[1]]},{len(drug[p.split('_')[1]])}")
                 # all_test_acc.update({"basic": basic, "drug": drug})
+                logger.info(f"{basic['nodes_name']}")
 
-        return all_test_acc
+        return ""
 
 
 def compute_gradients(model, inputs, target_class):
@@ -134,6 +144,7 @@ if __name__ == '__main__':
     parser.add_argument('--dir', type=str, default="")
     parser.add_argument('--all', type=str, default="")
     parser.add_argument('--model', type=str, default="")
+    parser.add_argument('--gene', type=str, default="")
     args = parser.parse_args()
 
     data_util = Process(args)

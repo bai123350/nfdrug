@@ -47,7 +47,7 @@ workflow MURUNDATA {
         samplesheet,
         DATATETCH.out.json,
         MUTILDATAPROCESS.out.all_folders,
-         MUALLMODELS.out.model_dirs,
+        MUALLMODELS.out.model_dirs,
         MUTRAIN.out.train_dirs,
     )
 
