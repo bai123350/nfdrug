@@ -9,3 +9,4 @@ dependencies:
       - torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
       - matplotlib==3.9.2
       - seaborn==0.13.1
+      - pandas==2.1.4

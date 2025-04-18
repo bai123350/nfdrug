@@ -11,6 +11,8 @@ import logging
 import os
 import numpy as np
 from net import *
+import pandas as pd
+from sanke import sankey
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,17 +33,27 @@ class Process:
         predictions = []
         true_labels = []
 
+        x = np.array([])
+        index_all = np.array([])
+
         with torch.no_grad():
             for d in test_loader:
                 data = d[0].float().to(device)
-                print(data.shape)
+                x = np.concatenate((x, data.cpu().numpy()), axis=0) if x.size else data.cpu().numpy()
                 label = d[1].float().to(device)
                 event_label = label[:, 0]
                 time_label = label[:, 1]
 
                 pred,index = model(data, event_label, time_label)
-                print(index)
+
+                index_np = index.cpu().numpy()
+                index_np = np.expand_dims(index_np, axis=0) if index_np.ndim == 0 else index_np
+                index_all = np.concatenate((index_all, index_np), axis=0) if index_all.size else index_np
                 loss = cross(pred, event_label)
+                # loss.backward()
+                # data.requires_grad = True
+                # loss.backward(retain_graph=True)
+                # print(f"grad: {data.grad}")
 
                 test_loss += loss.item()
                 pred_labels = (pred >= 0.5).float()
@@ -54,7 +66,7 @@ class Process:
 
         avg_loss = test_loss / len(test_loader)
         accuracy = total_correct / total_samples
-        return avg_loss, accuracy, predictions, true_labels
+        return avg_loss, accuracy, predictions, true_labels,x,index_all
 
     def top10(self):
         all_test_acc = {}
@@ -80,10 +92,6 @@ class Process:
             if path.split('/')[-1] == p:
                 # train_data = torch.load(os.path.join(path, 'train_data.pt'), map_location='cpu')
                 test_data = torch.load(os.path.join(path, 'test_data.pt'))
-                for batch in test_data:
-                    data_matrix = batch[0].numpy()  # Assuming the first element in the batch is the data matrix
-                    print(data_matrix)
-                    print(data_matrix.shape)
                 # test_data = test_data.to('cuda:0')
                 model = torch.load(os.path.join("modelfolder",p,"model.pt"))  # Replace 'Net' with the actual model class used during training
                 model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt')))
@@ -98,9 +106,8 @@ class Process:
                 x_all = np.load(os.path.join("modelfolder",p,'all.npz'))
                 # print(x_all["x_data"])
                 # print(x_all["x_data"].shape)
-                # model = model.to('cuda:0')
-                test_loss, test_accuracy, predictions, true_labels = self.evaluate_model(model, test_loader, "cuda:0")
-
+                test_loss, test_accuracy, predictions, true_labels,x,index_all = self.evaluate_model(model, test_loader, "cuda:0")
+        return x, index_all
 
 
 class AllDir(object):
@@ -116,9 +123,10 @@ class AllDir(object):
                 logger.info(f"{p.split('_')[0]}-{drug[p.split('_')[0]]},{len(drug[p.split('_')[0]])}")
                 logger.info(f"{p.split('_')[1]}-{drug[p.split('_')[1]]},{len(drug[p.split('_')[1]])}")
                 # all_test_acc.update({"basic": basic, "drug": drug})
-                logger.info(f"{basic['nodes_name']}")
+                # logger.info(f"{basic['nodes_name']}")
+                input_data = basic['nodes_name']
 
-        return ""
+        return input_data
 
 
 def compute_gradients(model, inputs, target_class):
@@ -136,6 +144,14 @@ def compute_gradients(model, inputs, target_class):
     return gradients
 
 
+def read_gene(path):
+    focus_genes_list = []
+    with open(path) as f:
+        for index, line in enumerate(f.readlines()):
+            if index == 0:
+                continue
+            focus_genes_list.append(line.replace('"', "").split()[0])
+    return focus_genes_list
 
 
 
@@ -149,10 +165,23 @@ if __name__ == '__main__':
 
     data_util = Process(args)
     results = data_util.top10()
-    data_util.get(list(results.keys())[0])
+    x_test, index_all = data_util.get(list(results.keys())[0])
     # logger.info(f"Top 10 results: {results}")
     all_dir = AllDir(args)
-    all_dir.get(list(results.keys())[0])
+    input_data = all_dir.get(list(results.keys())[0])
+    biao_gene = read_gene(args.gene)
+    print(f"input_data: {input_data}")
+    print(f"biao_gene: {biao_gene}")
+    # Create a DataFrame with two columns by combining input_data and biao_gene
+    combinations = [(i, j) for i in input_data for j in biao_gene]
+    df = pd.DataFrame(combinations, columns=["input_data", "biao_gene"])
+
+    print(df)
+    sankey(
+    df["input_data"], df["biao_gene"], aspect=20,
+    fontsize=12, figureName="tt"
+    )
+
 
 
     tttt
