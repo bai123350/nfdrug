@@ -176,10 +176,9 @@ if __name__ == '__main__':
     combinations = [(i, j) for i in input_data for j in biao_gene]
     df = pd.DataFrame(combinations, columns=["input_data", "biao_gene"])
 
-    print(df)
     sankey(
     df["input_data"], df["biao_gene"], aspect=20,
-    fontsize=12, figureName="tt"
+    fontsize=3, figureName="tt"
     )
 
 
