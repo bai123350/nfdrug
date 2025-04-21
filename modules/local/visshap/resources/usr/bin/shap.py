@@ -3,7 +3,6 @@
 import argparse
 import json
 from math import log
-from operator import index
 
 # from pyexpat import model
 from sympy import im
@@ -64,11 +63,6 @@ class Process:
                     else index_np
                 )
                 loss = cross(pred, event_label)
-                # loss.backward()
-                # data.requires_grad = True
-                # loss.backward(retain_graph=True)
-                # print(f"grad: {data.grad}")
-
                 test_loss += loss.item()
                 pred_labels = (pred >= 0.5).float()
                 correct = (pred_labels == event_label).sum().item()
@@ -108,14 +102,12 @@ class Process:
             if path.split("/")[-1] == p:
                 # train_data = torch.load(os.path.join(path, 'train_data.pt'), map_location='cpu')
                 test_data = torch.load(os.path.join(path, "test_data.pt"))
-                # test_data = test_data.to('cuda:0')
                 model = torch.load(os.path.join("modelfolder", p, "model.pt"))
                 # Replace 'Net' with the actual model class used during training
                 model.load_state_dict(torch.load(os.path.join(path, "best_model.pt")))
                 test_loader = torch.utils.data.DataLoader(
                     test_data.dataset,
                     batch_size=min(test_data.batch_size, 16),
-                    # batch_size = 4,
                     shuffle=False,
                     num_workers=2,
                     pin_memory=True,
@@ -126,13 +118,9 @@ class Process:
                     self.evaluate_model(model, test_loader, "cuda:0")
                 )
 
-                # 选择一个样本进行分析
                 all_res = {}
                 for pp in range(x.shape[0]):
-                    print(pp)
-                    sample_input = torch.FloatTensor(x[pp : (pp + 1)]).to(
-                        "cuda:0"
-                    )  # 使用第一个样本
+                    sample_input = torch.FloatTensor(x[pp : (pp + 1)]).to("cuda:0")
                     target_class = index_all[pp]
                     # 计算积分梯度
                     ig = integrated_gradients(
@@ -143,18 +131,8 @@ class Process:
                     top_5_dict = dict(
                         zip(top_5_indices, importance_scores[top_5_indices])
                     )
-                    print(f"Top 5 most important features: {top_5_dict}")
-                    print(
-                        f"importance_scores: {importance_scores.shape}-{importance_scores}"
-                    )
-                    all_res[pp] = top_5_dict
-                    # feature_importance = dict(zip(, importance_scores))
 
-                    # # 打印最重要的特征
-                    # for feature, score in sorted(feature_importance.items(),
-                    #                         key=lambda x: x[1],
-                    #                         reverse=True)[:10]:
-                    #     print(f"Feature: {feature}, Importance: {score:.4f}")
+                    all_res[pp] = top_5_dict
 
         return x, index_all, all_res
 
@@ -176,45 +154,9 @@ class AllDir(object):
                     f"{p.split('_')[1]}-{drug[p.split('_')[1]]},{len(drug[p.split('_')[1]])}"
                 )
                 # all_test_acc.update({"basic": basic, "drug": drug})
-                # logger.info(f"{basic['nodes_name']}")
                 input_data = basic["nodes_name"]
 
         return input_data
-
-
-# def integrated_gradients(model, input_tensor, target_class, steps=50):
-#     """
-#     Calculate integrated gradients for a given input and target class.
-#     Args:
-#         model: The neural network model
-#         input_tensor: Input tensor to analyze
-#         target_class: Target class index
-#         steps: Number of steps for approximation
-#     Returns:
-#         integrated_grads: Integrated gradients for the input
-#     """
-#     model.eval()
-#     baseline = torch.zeros_like(input_tensor).to("cuda:0")
-#     scaled_inputs = [
-#         baseline + (float(i) / steps) * (input_tensor - baseline)
-#         for i in range(steps + 1)
-#     ]
-#     grads = []
-
-#     for scaled_input in scaled_inputs:
-#         scaled_input.requires_grad = True
-#         output = model(scaled_input.float(), None, None)[0]
-#         print(output.shape)
-#         score = output[target_class]
-
-#         gradients = torch.autograd.grad(score, scaled_input, create_graph=True)[0]
-#         grads.append(gradients.cpu().detach().numpy())
-
-#     avg_grads = np.average(grads[:-1], axis=0)
-#     integrated_grads = (
-#         input_tensor.cpu().detach().numpy() - baseline.cpu().detach().numpy()
-#     ) * avg_grads
-#     return integrated_grads
 
 
 def integrated_gradients(
@@ -266,21 +208,6 @@ def integrated_gradients(
     return integrated_grads
 
 
-def compute_gradients(model, inputs, target_class):
-    """
-    Compute gradients of the output with respect to the inputs for a specific target class.
-    """
-    model.eval()
-    inputs.requires_grad = True
-
-    outputs = model(inputs)
-    loss = outputs[0, target_class]
-    loss.backward()
-
-    gradients = inputs.grad
-    return gradients
-
-
 def read_gene(path):
     focus_genes_list = []
     with open(path) as f:
@@ -302,14 +229,9 @@ if __name__ == "__main__":
     data_util = Process(args)
     results = data_util.top10()
     x_test, index_all, all_res = data_util.get(list(results.keys())[0])
-    print(index_all)
-    # logger.info(f"Top 10 results: {results}")
     all_dir = AllDir(args)
     input_data = all_dir.get(list(results.keys())[0])
     biao_gene = read_gene(args.gene)
-    print(f"input_data: {input_data}")
-    print(f"biao_gene: {biao_gene}")
-
     ss = np.array([])
     for k, v in all_res.items():
         gene = biao_gene[index_all[int(k)]]
@@ -319,11 +241,7 @@ if __name__ == "__main__":
                 if ss.size
                 else np.array([[input_data[int(k1)], gene, v1]])
             )
-
-
     df = pd.DataFrame(ss, columns=["input_data", "biao_gene", "value"])
-    print(df)
-
     sankey(
         left=df["input_data"],
         right=df["biao_gene"],
@@ -332,6 +250,3 @@ if __name__ == "__main__":
         fontsize=3,
         figureName="tt",
     )
-    # sankey(df["input_data"], df["biao_gene"], aspect=20, fontsize=3, figureName="tt")
-
-    # tttt
