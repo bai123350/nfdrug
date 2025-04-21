@@ -13,7 +13,7 @@ process VISSHAP {
     path(trainfoler, stageAs: "trainfolder/*")
 
     output:
-    // path("*pdf") , emit : pdf
+    path("*pdf") , emit : pdf
     path "versions.yml", emit: versions
 
     script:

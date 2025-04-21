@@ -138,10 +138,10 @@ class BFRegNN_COX(nn.Module):
         x = self.bfregNN(x)
         index = torch.argmax(x, dim=-1)
         if x.dim() > 1:
-            x = self.sig(self.flat(self.linear(x)).squeeze(-1))
+            x1 = self.sig(self.flat(self.linear(x)).squeeze(-1))
         else:
-            x = self.sig(self.flat(self.linear(x.unsqueeze(0))).squeeze(-1))
-        return x,index
+            x1 = self.sig(self.flat(self.linear(x.unsqueeze(0))).squeeze(-1))
+        return x,x1,index
 
 
 
