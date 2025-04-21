@@ -1,3 +1,7 @@
+/**
+ * @author: @KONG jin dong
+ * @date: 2025-03-01
+**/
 include { DATATETCH        } from '../modules/local/datafetch/main'
 include { MUTILDATAPROCESS } from '../modules/local/dataprocess/mudrug'
 include { MUALLMODELS      } from '../modules/local/models/mumodel'
