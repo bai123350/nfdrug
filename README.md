@@ -15,25 +15,30 @@
 
 ```mermaid
 flowchart TB
-    subgraph RUNDATA
+    subgraph MURUNDATA
     subgraph take
-    v0["samplesheet"]
+    v0["samples"]
     end
-    v3([DATATETCH])
-    v6([DATAPROCESS])
-    v7([MODELS])
-    v8([TRAIN])
-    subgraph emit
-    v9["json_report"]
-    end
+    v3([DATATETCHDRUG])
+    v4([MUTILDATAPROCESS])
+    v5([MUALLMODELS])
+    v6([MUTRAIN])
+    v7([VISIABLE])
+    v8([SHAP])
     v0 --> v3
+    v0 --> v4
+    v3 --> v4
+    v0 --> v5
+    v4 --> v5
     v0 --> v6
-    v3 --> v6
+    v5 --> v6
     v0 --> v7
     v6 --> v7
     v0 --> v8
+    v3 --> v8
+    v4 --> v8
+    v5 --> v8
     v6 --> v8
-    v3 --> v9
     end
 ```
 
