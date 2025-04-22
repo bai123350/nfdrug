@@ -9,6 +9,11 @@ include { MUTRAIN          } from '../modules/local/train/mutrain'
 include { VISIABLE         } from '../modules/local/visiable/main'
 include { VISSHAP          } from '../modules/local/visshap/main'
 
+/**
+ other modules
+**/
+include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+
 
 
 
@@ -71,6 +76,39 @@ workflow MURUNDATA {
     )
 
     println("ch_multiqc_files: ${ch_multiqc_files.view()}")
+
+    // 收集所有模块的版本信息
+    ch_versions = ch_versions.mix(
+        MUTILDATAPROCESS.out.versions,
+        MUALLMODELS.out.versions,
+        MUTRAIN.out.versions,
+        VISIABLE.out.versions,
+        VISSHAP.out.versions
+    )
+
+    println("ch_versions: ${ch_versions.view()}")
+
+    //
+    // Collate and save software versions
+    //
+    softwareVersionsToYAML(ch_versions)
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'pipeline_software_mqc_versions.yml',
+            sort: true,
+            newLine: true,
+        )
+        .set { ch_collated_versions }
+
+     //
+    // MODULE: MultiQC
+    //
+    // 读取默认的MultiQC配置文件，定义报告的基本布局和设置
+    ch_multiqc_config = Channel.fromPath(
+        "${projectDir}/assets/multiqc_config.yml",
+        checkIfExists: true
+    )
+
 
 
 
