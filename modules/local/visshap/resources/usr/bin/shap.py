@@ -122,7 +122,7 @@ class Process:
                 for pp in range(x.shape[0]):
                     sample_input = torch.FloatTensor(x[pp : (pp + 1)]).to("cuda:0")
                     target_class = index_all[pp]
-                    # 计算积分梯度
+                    # 计算梯度
                     ig = integrated_gradients(
                         model, sample_input, target_class=target_class, steps=50
                     )
@@ -248,5 +248,5 @@ if __name__ == "__main__":
         rightWeight=df["value"].astype(float),
         aspect=20,
         fontsize=3,
-        figureName="tt",
+        figureName=f"{list(results.keys())[0]}",
     )
