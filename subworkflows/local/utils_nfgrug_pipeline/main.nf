@@ -1,5 +1,5 @@
 //
-// Subworkflow with functionality specific to the open-bio/molflow pipeline
+// Subworkflow with functionality specific to the pipeline
 //
 
 /*
@@ -48,8 +48,6 @@ workflow PIPELINE_INITIALISATION {
         workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1
     )
 
-    //println(workflow.profile.tokenize(','))
-
     //
     // Validate parameters and generate parameter summary to stdout
     //
@@ -62,8 +60,6 @@ workflow PIPELINE_INITIALISATION {
     //
     // Check config provided to the pipeline
     //
-    // println('================**********')
-    // println(nextflow_cli_args)
     UTILS_NFCORE_PIPELINE (
         nextflow_cli_args
     )
