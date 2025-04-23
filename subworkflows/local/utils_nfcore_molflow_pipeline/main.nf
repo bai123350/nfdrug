@@ -233,6 +233,13 @@ def toolBibliographyText() {
     return reference_text
 }
 
+/**
+ * 生成用于 MultiQC 的描述文本，基于提供的 YAML 文件和流程元数据。
+ * 该函数处理流程元数据，包括 DOI 引用和工具引用，并使用模板引擎生成最终的 HTML 描述。
+ *
+ * @param mqc_methods_yaml 包含 MultiQC 方法描述模板的 YAML 文件。
+ * @return 生成的 HTML 描述文本字符串。
+ */
 def methodsDescriptionText(mqc_methods_yaml) {
     // Convert  to a named map so can be used as with familar NXF ${workflow} variable syntax in the MultiQC YML file
     def meta = [:]

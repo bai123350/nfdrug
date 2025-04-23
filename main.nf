@@ -8,10 +8,9 @@
 */
 
 //include { MOLFLOW  } from './workflows/molflow'
-include { RUNDATA    } from './workflows/flow'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_molflow_pipeline'
-include { MURUNDATA } from './workflows/muflow.nf'
-// include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_molflow_pipeline'
+include { MURUNDATA               } from './workflows/muflow.nf'
+include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 // include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_molflow_pipeline'
 
 /*
@@ -69,8 +68,6 @@ workflow {
         params.input
     )
 
-
-
     // RUNDATA (
     //     PIPELINE_INITIALISATION.out.samplesheet
     // )
@@ -79,27 +76,17 @@ workflow {
         PIPELINE_INITIALISATION.out.samplesheet
     )
 
-
-
-
-    //
-    // WORKFLOW: Run main workflow
-    //
-    // OPENBIO_MOLFLOW (
-    //     PIPELINE_INITIALISATION.out.samplesheet
-    // )
-    //
     // SUBWORKFLOW: Run completion tasks
     //
-    // PIPELINE_COMPLETION (
-    //     params.email,
-    //     params.email_on_fail,
-    //     params.plaintext_email,
-    //     params.outdir,
-    //     params.monochrome_logs,
-    //     params.hook_url,
-    //     OPENBIO_MOLFLOW.out.multiqc_report
-    // )
+    PIPELINE_COMPLETION (
+        params.email,
+        params.email_on_fail,
+        params.plaintext_email,
+        params.outdir,
+        params.monochrome_logs,
+        params.hook_url,
+        MURUNDATA.out.multiqc_report
+    )
 }
 
 /*
