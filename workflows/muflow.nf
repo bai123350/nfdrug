@@ -8,6 +8,7 @@ include { MUALLMODELS      } from '../modules/local/models/mumodel'
 include { MUTRAIN          } from '../modules/local/train/mutrain'
 include { VISIABLE         } from '../modules/local/visiable/main'
 include { VISSHAP          } from '../modules/local/visshap/main'
+include { MOVE             } from '../modules/local/move/main'
 
 /**
    * other modules
@@ -67,6 +68,15 @@ workflow MURUNDATA {
     matched_folders = filterMatchingFolders(MUTILDATAPROCESS.out.all_folders, vis_files)
     train_folders = filterMatchingFolders(MUTRAIN.out.train_dirs, vis_files)
 
+    ch_files = reduceChannels(
+        ch_multiqc_files,
+        train_folders,
+        VISIABLE.out.pdf,
+        VISSHAP.out.pdf,
+        VISIABLE.out.csv,
+        VISSHAP.out.csv
+    )
+
     // 混合通道
     ch_multiqc_files = mixChannels(
         ch_multiqc_files,
@@ -77,6 +87,11 @@ workflow MURUNDATA {
         VISSHAP.out.pdf,
         VISIABLE.out.csv,
         VISSHAP.out.csv
+    )
+
+    MOVE(
+        samplesheet,
+        ch_files.collect()
     )
 
 
@@ -208,6 +223,16 @@ def mixChannels(ch_multiqc_files, datatetch_json, matched_folders, train_folders
     return ch_multiqc_files.mix(
         datatetch_json.collect().ifEmpty([]),
         matched_folders.collect().ifEmpty([]),
+        train_folders.collect().ifEmpty([]),
+        visiable_pdf.collect().ifEmpty([]),
+        visshap_pdf.collect().ifEmpty([]),
+        vcsv.collect().ifEmpty([]),
+        mcsv.collect().ifEmpty([])
+    )
+}
+
+def reduceChannels(ch_multiqc_files, train_folders, visiable_pdf, visshap_pdf,vcsv,mcsv) {
+    return ch_multiqc_files.mix(
         train_folders.collect().ifEmpty([]),
         visiable_pdf.collect().ifEmpty([]),
         visshap_pdf.collect().ifEmpty([]),
