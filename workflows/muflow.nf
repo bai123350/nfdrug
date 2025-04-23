@@ -16,7 +16,7 @@ include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pi
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_molflow_pipeline'
+include { methodsDescriptionText } from '../subworkflows/local/utils_nfgrug_pipeline'
 
 
 workflow MURUNDATA {
