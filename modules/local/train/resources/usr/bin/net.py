@@ -136,7 +136,10 @@ class BFRegNN_COX(nn.Module):
 
     def forward(self, x, event, time):
         x = self.bfregNN(x)
-        x = self.sig(self.flat(self.linear(x)).squeeze(-1))
+        if x.dim() > 1:
+            x = self.sig(self.flat(self.linear(x)).squeeze(-1))
+        else:
+            x = self.sig(self.flat(self.linear(x.unsqueeze(0))).squeeze(-1))
         return x
 
 class BuildModel(object):
