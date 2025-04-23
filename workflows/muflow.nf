@@ -133,7 +133,7 @@ workflow MURUNDATA {
     // 创建一个值为参数摘要的通道，用于 MultiQC 报告
     ch_workflow_summary = Channel.value(paramsSummaryMultiqc(summary_params))
 
-    // 将工作流摘要文件混入 multiqc 文件通道
+
     // collectFile 操作符将内容收集到指定名称的文件中
     ch_multiqc_files = ch_multiqc_files.mix(
         ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml')
