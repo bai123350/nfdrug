@@ -4,10 +4,10 @@
     IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS / WORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfgrug_pipeline/main'
+include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfgrug_pipeline'
 include { MURUNDATA               } from './workflows/muflow'
-include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfgrug_pipeline/main'
-// include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_molflow_pipeline'
+include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfgrug_pipeline'
+// include { getGenomeAttribute      } from './subworkflows/local/utils_nfgrug_pipeline'
 
 // TODO nf-core: Remove this line if you don't need a FASTA file
 //   This is an example of how to use getGenomeAttribute() to fetch parameters
