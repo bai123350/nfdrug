@@ -1,6 +1,6 @@
 {
-    "name": "open-bio/molflow",
-    "homePage": "https://github.com/open-bio/molflow",
+    "name": "nfdrug",
+    "homePage": "https://github.com/",
     "repos": {
         "https://github.com/nf-core/modules.git": {
             "modules": {

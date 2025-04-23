@@ -44,13 +44,13 @@ class Process:
             else:
                 top_10_acc = dict(list(all_test_acc.items())[:(index + 1)])
                 break
-        return top_10_acc
+        return (top_10_acc,all_test_acc)
 
 class DataUtil(Process):
     def read_data(self):
         results = {}
         for p in self.file_list:
-            if p in self.top10().keys():
+            if p in self.top10()[0].keys():
                 train_data = torch.load(os.path.join(p, 'train_data.pt'), map_location='cpu')
                 test_data = torch.load(os.path.join(p, 'test_data.pt'), map_location='cpu')
 
@@ -89,7 +89,7 @@ class DataUtil(Process):
                 optimizer = optim.Adam(nn_model.parameters(), lr=0.001)
                 criterion = nn.BCELoss()
 
-                for epoch in range(100):  # 训练500个epoch
+                for epoch in range(100):
                     nn_model.train()
                     optimizer.zero_grad()
                     outputs = nn_model(train_features.float())
@@ -108,10 +108,10 @@ class DataUtil(Process):
                     'Logistic Regression': lr_accuracy,
                     'Random Forest': rf_accuracy,
                     'Neural Network': nn_accuracy,
-                    'BFReg NN' : self.top10()[p]
+                    'BFReg NN' : self.top10()[0][p]
                 }
 
-        return results
+        return results,self.top10()[1]
 
     def plot_accuracies(self, results):
         """绘制3种模型的预测准确率小提琴图和箱线图，并显示p值"""
@@ -167,7 +167,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data_util = DataUtil(args)
-    results = data_util.read_data()
+    results,all_acc = data_util.read_data()
+    df_all_acc = pd.DataFrame(list(all_acc.items()), columns=['drug', 'Accuracy'])
+    df_all_acc.to_csv('all_accuracies.csv', index=False)
     data_util.plot_accuracies(results)
 
 

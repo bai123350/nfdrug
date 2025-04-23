@@ -1,7 +1,7 @@
-name: molflow
-description: molecular-flow is a pipeline for molecular analysis
-author: fanxi
-org: open-bio
+name: nfdrug
+description: nfdrug-flow is a pipeline for drug analysis
+author: kongjd
+org: nfcore
 
 skip:
   # - github
@@ -10,12 +10,12 @@ skip:
   - igenomes
   # - nf_core_configs
 template:
-  author: fanxi
-  description: molecular-flow is a pipeline for molecular analysis
+  author: kongjd
+  description: nfdrug is a pipeline for drug analysis
   force: true
   is_nfcore: false
-  name: molecular-flow
-  org: Open-Bio
+  name: drug-flow
+  org: nfcore
   outdir: .
   skip_features:
     - github
@@ -44,10 +44,10 @@ template:
 license:
   type: MIT
   year: 2025
-  organization: Open-Bio
+  organization: nfcore
 
 # 联系方式
 contact:
-  email: fanxingfu3344@gmail.com
-  github: https://github.com/Open-Bio
-  website: https://github.com/Open-Bio
+  email: 1375652881@qq.com
+  github: https://github.com/BioLabFree
+  website: https://github.com/BioLabFree

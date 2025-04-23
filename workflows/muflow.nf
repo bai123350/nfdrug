@@ -74,7 +74,9 @@ workflow MURUNDATA {
         matched_folders,
         train_folders,
         VISIABLE.out.pdf,
-        VISSHAP.out.pdf
+        VISSHAP.out.pdf,
+        VISIABLE.out.csv,
+        VISSHAP.out.csv
     )
 
 
@@ -202,12 +204,14 @@ def filterMatchingFolders(folders_channel, vis_files) {
         .unique()
 }
 
-def mixChannels(ch_multiqc_files, datatetch_json, matched_folders, train_folders, visiable_pdf, visshap_pdf) {
+def mixChannels(ch_multiqc_files, datatetch_json, matched_folders, train_folders, visiable_pdf, visshap_pdf,vcsv,mcsv) {
     return ch_multiqc_files.mix(
         datatetch_json.collect().ifEmpty([]),
         matched_folders.collect().ifEmpty([]),
         train_folders.collect().ifEmpty([]),
         visiable_pdf.collect().ifEmpty([]),
-        visshap_pdf.collect().ifEmpty([])
+        visshap_pdf.collect().ifEmpty([]),
+        vcsv.collect().ifEmpty([]),
+        mcsv.collect().ifEmpty([])
     )
 }

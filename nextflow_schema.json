@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/open-bio/molflow/master/nextflow_schema.json",
+    "$id": "https://raw.githubusercontent.com/github.com/BioLabFree/master/nextflow_schema.json",
     "title": "open-bio/molflow pipeline parameters",
-    "description": "molecular-flow is a pipeline for molecular analysis",
+    "description": "drug-flow is a pipeline for drug analysis",
     "type": "object",
     "$defs": {
         "input_output_options": {

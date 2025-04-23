@@ -13,6 +13,7 @@ process VISIABLE {
     output:
     val(meta), emit: meta_id
     path("*pdf") , emit : pdf
+    path("*csv") , emit : csv
     path "versions.yml", emit: versions
 
     when:
