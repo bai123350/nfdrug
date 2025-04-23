@@ -242,6 +242,7 @@ if __name__ == "__main__":
                 else np.array([[input_data[int(k1)], gene, v1]])
             )
     df = pd.DataFrame(ss, columns=["input_data", "biao_gene", "value"])
+    df = df.loc[df.groupby(['input_data', 'biao_gene'])['value'].idxmax()]
     sankey(
         left=df["input_data"],
         right=df["biao_gene"],
@@ -250,3 +251,4 @@ if __name__ == "__main__":
         fontsize=3,
         figureName=f"{list(results.keys())[0]}",
     )
+    df.to_csv(f"{list(results.keys())[0]}.csv", index=False)

@@ -14,6 +14,7 @@ process VISSHAP {
 
     output:
     path("*pdf") , emit : pdf
+    path("*csv") , emit : csv
     path "versions.yml", emit: versions
 
     script:

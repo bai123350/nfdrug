@@ -10,7 +10,7 @@ include { VISIABLE         } from '../modules/local/visiable/main'
 include { VISSHAP          } from '../modules/local/visshap/main'
 
 /**
- other modules
+   * other modules
 **/
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
@@ -77,7 +77,6 @@ workflow MURUNDATA {
         VISSHAP.out.pdf
     )
 
-    // println("ch_multiqc_files: ${ch_multiqc_files.view()}")
 
     // 收集所有模块的版本信息
     ch_versions = ch_versions.mix(
@@ -87,8 +86,6 @@ workflow MURUNDATA {
         VISIABLE.out.versions,
         VISSHAP.out.versions
     )
-
-    // println("ch_versions: ${ch_versions.view()}")
 
     //
     // Collate and save software versions
